@@ -14,46 +14,87 @@ module GithubGraphql
 projectName :: String
 projectName = "github-graphql"
 
-myQuery :: GraphQLQuery
-myQuery = toGraphQL $
+myQuery :: Repository
+myQuery =
     repository
-        & owner =. "kowainik"
-        & name =. "stan"
-        >. pullRequests
-            & last =. 5
-            & states =. [Closed, Open]
-            >. nodes
+        & set owner "kowainik"
+        & set name  "stan"
+        >. (pullRequests
+            & set last 5
+            & set states [Closed, Open]
+            >. (nodes
                ?. title
-               >. author
+               >. (author
                    ?. login
+                  )
+               )
+           )
 
-newtype GraphQLQuery = GraphQLQuery Text
+--        >. (issues ...
+--           )
 
-class ToGraphQL a where
-    toGraphQL :: a -> GraphQLQuery
+-- newtype GraphQLQuery = GraphQLQuery Text
+--
+-- class ToGraphQL a where
+--     toGraphQL :: a -> GraphQLQuery
+
+infixl 0 >.
+(>.) :: Repository -> RepositoryPayload -> Repository
+repo >. payload = repo { rQuery = payload : rQuery repo }
+
 
 data Repository = Repository
     { rOwner :: !Text
     , rName  :: !Text
-    , rQuery :: !(Map RepoNode Connection)
+    , rQuery :: ![RepositoryPayload]
     }
 
-instance ToGraphQL Repositry where
-    toGraphQL Repository{..} = GrqphQLQuery $
-      "repository(" <> "owner: " <> rOwner <> ", name: " <> rName <> ") {" <>
-      <> toGraphQL rQuery
-      <> "}"
+repository :: Repository
+repository = Repository
+    { rOwner = ""
+    , rName = ""
+    , rQuery = []
+    }
 
-data RepoNode
-    = PullRequests
-    | Issues
+-- instance ToGraphQL Repositry where
+--     toGraphQL Repository{..} = GrqphQLQuery $
+--       "repository(" <> "owner: " <> rOwner <> ", name: " <> rName <> ") {" <>
+--       <> toGraphQL rQuery
+--       <> "}"
+
+data RepositoryConnection
+    = RCPullRequests
+    | RCIssues
+
+data SRepositoryConnection (t :: RepositoryConnection) where
+    SRCPullRequests :: SRepositoryConnection 'RCPullRequests
+    SRCIssues       :: SRepositoryConnection 'RCIssues
+
+data RepositoryPayload where
+    RepositoryPayload :: SRepositoryConnection t -> Connection (ToRepositoryPayload t) -> RepositoryPayload
+
+type family ToRepositoryPayload (t :: RepositoryConnection) :: Type where
+    ToRepositoryPayload 'RCPullRequests = PullRequest
 
 data Connection a = Connection
     { last     :: !Int
     , states   :: ![State]
-    , nodes    :: ![a]
-    , edges    :: ![Edge a]
-    , pageInfo :: !()
+    , nodes    :: !a
+--    , edges    :: !(Edge a)
+--    , pageInfo :: !()
+    }
+
+pullRequests :: Connection PullRequest
+pullRequests = Connection
+    { last = 0
+    , states = []
+    , nodes = PullRequest
+        { prTitle = ""
+        , prAuthor = Actor
+            { actorLogin = ""
+            }
+        }
+    ,
     }
 
 data Edge a = Edge
@@ -64,3 +105,12 @@ data Edge a = Edge
 data State
     = Open
     | Closed
+
+data PullRequest = PullRequest
+    { prTitle :: !Text
+    , prAuthor :: !Actor
+    }
+
+newtype Actor = Actor
+    { actorLogin :: !Text
+    }
