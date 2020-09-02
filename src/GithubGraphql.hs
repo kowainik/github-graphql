@@ -30,6 +30,31 @@ myQuery =
                )
            )
 
+myQuery :: Repository
+myQuery =
+    repository
+        ( set owner "kowainik"
+        . set name  "stan"
+        )
+        [ pullRequests
+            ( set last 5
+            . set states [Closed, Open]
+            )
+            [ nodes
+               setTtitle
+               [ author setLogin
+               ]
+            ]
+
+        ]
+
+repository :: (RepositoryArgs -> RepositoryArgs) -> [RepositoryPayload] -> QueryGraphql
+
+data RepositoryArgs
+    { raOwner :: !Text
+    , raName :: !Text
+    }
+
 --        >. (issues ...
 --           )
 
