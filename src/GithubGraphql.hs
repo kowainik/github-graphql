@@ -1,3 +1,7 @@
+{-# LANGUAGE DataKinds    #-}
+{-# LANGUAGE GADTs        #-}
+{-# LANGUAGE TypeFamilies #-}
+
 {- |
 Copyright: (c) 2020 Kowainik
 SPDX-License-Identifier: MPL-2.0
@@ -10,82 +14,71 @@ module GithubGraphql
     ( projectName
     ) where
 
+import Data.Kind (Type)
+import Data.Text (Text)
+
 
 projectName :: String
 projectName = "github-graphql"
 
-myQuery :: Repository
+-- myQuery :: Repository
+-- myQuery =
+--     repository
+--         & set owner "kowainik"
+--         & set name  "stan"
+--         >. (pullRequests
+--             & set last 5
+--             & set states [Closed, Open]
+--             >. (nodes
+--                ?. title
+--                >. (author
+--                    ?. login
+--                   )
+--                )
+--            )
+
+myQuery :: QueryGraphql
 myQuery =
     repository
-        & set owner "kowainik"
-        & set name  "stan"
-        >. (pullRequests
-            & set last 5
-            & set states [Closed, Open]
-            >. (nodes
-               ?. title
-               >. (author
-                   ?. login
-                  )
-               )
-           )
-
-myQuery :: Repository
-myQuery =
-    repository
-        ( set owner "kowainik"
-        . set name  "stan"
-        )
-        [ pullRequests
-            ( set last 5
-            . set states [Closed, Open]
-            )
-            [ nodes
-               setTtitle
-               [ author setLogin
-               ]
-            ]
-
-        ]
-
-repository :: (RepositoryArgs -> RepositoryArgs) -> [RepositoryPayload] -> QueryGraphql
-
-data RepositoryArgs
-    { raOwner :: !Text
-    , raName :: !Text
-    }
-
---        >. (issues ...
---           )
-
--- newtype GraphQLQuery = GraphQLQuery Text
+        id
+--        ( set owner "kowainik"
+--        . set name  "stan"
+--        )
+        []
+--        [ pullRequests
+--            ( set last 5
+--            . set states [Closed, Open]
+--            )
+--            [ nodes
+--               setTtitle
+--               [ author setLogin
+--               ]
+--            ]
 --
--- class ToGraphQL a where
---     toGraphQL :: a -> GraphQLQuery
+--        ]
 
-infixl 0 >.
-(>.) :: Repository -> RepositoryPayload -> Repository
-repo >. payload = repo { rQuery = payload : rQuery repo }
+-- TODO: replace with a proper AST
+newtype QueryGraphql = QueryGraphql Text
 
-
-data Repository = Repository
-    { rOwner :: !Text
-    , rName  :: !Text
-    , rQuery :: ![RepositoryPayload]
-    }
-
-repository :: Repository
-repository = Repository
-    { rOwner = ""
-    , rName = ""
-    , rQuery = []
-    }
+repository :: (Repository -> Repository) -> [RepositoryPayload] -> QueryGraphql
+repository _setRepository _payload = QueryGraphql ""
 
 -- instance ToGraphQL Repositry where
 --     toGraphQL Repository{..} = GrqphQLQuery $
 --       "repository(" <> "owner: " <> rOwner <> ", name: " <> rName <> ") {" <>
 --       <> toGraphQL rQuery
 --       <> "}"
+
+data Repository = Repository
+    { repositoryOwner :: !Text
+    , repositoryName  :: !Text
+    }
+
+emptyRepository :: Repository
+emptyRepository = Repository
+    { repositoryOwner = ""
+    , repositoryName  = ""
+    }
 
 data RepositoryConnection
     = RCPullRequests
@@ -102,24 +95,11 @@ type family ToRepositoryPayload (t :: RepositoryConnection) :: Type where
     ToRepositoryPayload 'RCPullRequests = PullRequest
 
 data Connection a = Connection
-    { last     :: !Int
-    , states   :: ![State]
-    , nodes    :: !a
+    { last   :: !Int
+    , states :: ![State]
+    , nodes  :: !a
 --    , edges    :: !(Edge a)
 --    , pageInfo :: !()
-    }
-
-pullRequests :: Connection PullRequest
-pullRequests = Connection
-    { last = 0
-    , states = []
-    , nodes = PullRequest
-        { prTitle = ""
-        , prAuthor = Actor
-            { actorLogin = ""
-            }
-        }
-    ,
     }
 
 data Edge a = Edge
@@ -132,10 +112,29 @@ data State
     | Closed
 
 data PullRequest = PullRequest
-    { prTitle :: !Text
+    { prTitle  :: !Text
     , prAuthor :: !Actor
     }
 
+emptyPullRequest :: PullRequest
+emptyPullRequest = PullRequest
+    { prTitle = ""
+    , prAuthor = emptyActor
+    }
+
+pullRequest :: (PullRequest -> PullRequest) -> RepositoryPayload
+pullRequest setPullRequest = RepositoryPayload SRCPullRequests Connection
+    { last = 0
+    , states = []
+    , nodes = setPullRequest emptyPullRequest
+    }
+
+
 newtype Actor = Actor
-    { actorLogin :: !Text
+    { actorLogin :: Text
+    }
+
+emptyActor :: Actor
+emptyActor = Actor
+    { actorLogin = ""
     }

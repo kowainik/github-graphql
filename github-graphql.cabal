@@ -64,6 +64,8 @@ library
   hs-source-dirs:      src
   exposed-modules:     GithubGraphql
 
+  build-depends:       text ^>= 1.2.3
+
 test-suite github-graphql-test
   import:              common-options
   type:                exitcode-stdio-1.0
