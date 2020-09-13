@@ -62,8 +62,8 @@ common common-options
 library
   import:              common-options
   hs-source-dirs:      src
-  exposed-modules:     GithubGraphql
-                       GitHub.GraphQL
+  exposed-modules:     GitHub
+                         GitHub.GraphQL
 
   build-depends:       text ^>= 1.2.3
 

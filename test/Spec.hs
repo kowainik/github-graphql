@@ -1,6 +1,6 @@
 module Main (main) where
 
-import GithubGraphql (projectName)
+import GitHub (projectName)
 
 
 main :: IO ()

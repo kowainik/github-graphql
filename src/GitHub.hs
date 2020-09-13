@@ -10,12 +10,14 @@ Maintainer: Kowainik <xrom.xkov@gmail.com>
 GraphQL bindings to GitHub API
 -}
 
-module GithubGraphql
+module GitHub
     ( projectName
     ) where
 
 import Data.Kind (Type)
 import Data.Text (Text)
+
+import GitHub.GraphQL (State (..))
 
 
 projectName :: String
