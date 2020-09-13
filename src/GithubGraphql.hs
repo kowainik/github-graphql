@@ -107,10 +107,6 @@ data Edge a = Edge
     , edgeNode   :: !a
     }
 
-data State
-    = Open
-    | Closed
-
 data PullRequest = PullRequest
     { prTitle  :: !Text
     , prAuthor :: !Actor
