@@ -7,14 +7,45 @@ Copyright: (c) 2020 Kowainik
 SPDX-License-Identifier: MPL-2.0
 Maintainer: Kowainik <xrom.xkov@gmail.com>
 
-GraphQL bindings to GitHub API
+GraphQL bindings to GitHub API.
 -}
 
 module GitHub
-    ( projectName
+    ( -- * Top-level queries
+      Repository (..)
+    , RepositoryArgs (..)
+    , repository
+
+      -- * Queries connections
+      -- ** Issues
+    , Issues (..)
+    , IssuesArgs (..)
+    , issues
+      -- ** PullRequests
+    , PullRequests (..)
+    , PullRequestsArgs (..)
+    , pullRequests
+
+      -- * Connection
+    , Connection (..)
+    , nodes
+
+      -- * Connections fields
+      -- ** Interfaces
+    , HasAuthor (..)
+    , HasTitle (..)
+      -- ** Data
+    , AuthorField (..)
+    , IssueField (..)
+    , PullRequestField (..)
+
+      -- * Temp
+    , exampleQuery
+    , projectName
     ) where
 
 import Data.Kind (Type)
+import Data.List.NonEmpty (NonEmpty (..))
 import Data.Text (Text)
 
 import GitHub.GraphQL (State (..))
@@ -23,116 +54,206 @@ import GitHub.GraphQL (State (..))
 projectName :: String
 projectName = "github-graphql"
 
--- myQuery :: Repository
--- myQuery =
---     repository
---         & set owner "kowainik"
---         & set name  "stan"
---         >. (pullRequests
---             & set last 5
---             & set states [Closed, Open]
---             >. (nodes
---                ?. title
---                >. (author
---                    ?. login
---                   )
---                )
---            )
+-- TODO: temporary helper function
+one :: a -> NonEmpty a
+one x = x :| []
 
-myQuery :: QueryGraphql
-myQuery =
-    repository
-        id
---        ( set owner "kowainik"
---        . set name  "stan"
---        )
-        []
---        [ pullRequests
---            ( set last 5
---            . set states [Closed, Open]
---            )
---            [ nodes
---               setTtitle
---               [ author setLogin
---               ]
---            ]
---
---        ]
+{- Example of the following GraphQL query:
 
--- TODO: replace with a proper AST
-newtype QueryGraphql = QueryGraphql Text
+@
+query {
+  repository(owner: "kowainik", name: "hit-on") {
+    issues(last: 3, states: [OPEN]) {
+        nodes {
+          title
+          author{
+            login
+          }
+        }
+    }
 
-repository :: (Repository -> Repository) -> [RepositoryPayload] -> QueryGraphql
-repository _setRepository _payload = QueryGraphql ""
+    pullRequests(last: 3, states: [OPEN]) {
+        nodes {
+          title
+          author {
+            login
+          }
+        }
+    }
+  }
+}
+@
+-}
+exampleQuery :: Repository
+exampleQuery = repository
+    (RepositoryArgs { owner = "kowainik", name = "hit-on"})
+    $ issues
+        (IssuesArgs { last = 3, states = one Open })
+        (one $ nodes $
+           title :|
+           [author $ one login]
+        )
+    :|
+    [ pullRequests
+        (PullRequestsArgs { pullRequestsLast = 3, pullRequestsStates = one Open })
+        (one $ nodes $
+           title :|
+           [author $ one login]
+        )
 
--- instance ToGraphQL Repositry where
---     toGraphQL Repository{..} = GrqphQLQuery $
---       "repository(" <> "owner: " <> rOwner <> ", name: " <> rName <> ") {" <>
---       <> toGraphQL rQuery
---       <> "}"
+    ]
 
+{- | The @Repository@ top-level connection:
+
+* https://developer.github.com/v4/query/#connections
+-}
 data Repository = Repository
-    { repositoryOwner :: !Text
-    , repositoryName  :: !Text
+    { repositoryArgs   :: !RepositoryArgs
+    , repositoryFields :: !(NonEmpty RepositoryField)
     }
 
-emptyRepository :: Repository
-emptyRepository = Repository
-    { repositoryOwner = ""
-    , repositoryName  = ""
+{- | Arguments for the 'Repository' connection.
+-}
+-- TODO: change field names to more verbose and add lenses
+data RepositoryArgs = RepositoryArgs
+    { owner :: !Text
+    , name  :: !Text
     }
 
-data RepositoryConnection
-    = RCPullRequests
-    | RCIssues
+{- | Fields and connections of the @Repository@ object:
 
-data SRepositoryConnection (t :: RepositoryConnection) where
-    SRCPullRequests :: SRepositoryConnection 'RCPullRequests
-    SRCIssues       :: SRepositoryConnection 'RCIssues
+* https://developer.github.com/v4/object/repository/
+-}
+data RepositoryField
+    = RepositoryIssues Issues
+    | RepositoryPullRequests PullRequests
 
-data RepositoryPayload where
-    RepositoryPayload :: SRepositoryConnection t -> Connection (ToRepositoryPayload t) -> RepositoryPayload
+{- | Smart constructor for the 'Repository' type.
+-}
+repository :: RepositoryArgs -> NonEmpty RepositoryField -> Repository
+repository repositoryArgs repositoryFields = Repository{..}
 
-type family ToRepositoryPayload (t :: RepositoryConnection) :: Type where
-    ToRepositoryPayload 'RCPullRequests = PullRequest
 
-data Connection a = Connection
+{- | The @issues@ connection of the 'Repository' object.
+
+* https://developer.github.com/v4/object/repository/#connections
+-}
+data Issues = Issues
+    { issuesArgs        :: !IssuesArgs
+    , issuesConnections :: !(NonEmpty (Connection Issues))
+    }
+
+{- | Arguments for the 'Issues' connection.
+-}
+data IssuesArgs = IssuesArgs
     { last   :: !Int
-    , states :: ![State]
-    , nodes  :: !a
---    , edges    :: !(Edge a)
---    , pageInfo :: !()
+    , states :: !(NonEmpty State)
     }
 
-data Edge a = Edge
-    { edgeCursor :: !Text
-    , edgeNode   :: !a
+{- | Fields of the @Issue@ object.
+
+* https://developer.github.com/v4/object/issue/
+-}
+data IssueField
+    = IssueTitle
+    | IssueAuthor (NonEmpty AuthorField)
+
+{- | Smart constructor for the 'Issue' field of the 'RepositoryField'.
+-}
+issues :: IssuesArgs -> NonEmpty (Connection Issues) -> RepositoryField
+issues issuesArgs issuesConnections = RepositoryIssues Issues{..}
+
+{- | The @pullRequests@ connection of the 'Repository' object.
+
+* https://developer.github.com/v4/object/repository/#connections
+-}
+data PullRequests = PullRequests
+    { pullRequestsArgs        :: !PullRequestsArgs
+    , pullRequestsConnections :: !(NonEmpty (Connection PullRequests))
     }
 
-data PullRequest = PullRequest
-    { prTitle  :: !Text
-    , prAuthor :: !Actor
+{- | Arguments for the 'PullRequest' connection.
+-}
+data PullRequestsArgs = PullRequestsArgs
+    { pullRequestsLast   :: !Int
+    , pullRequestsStates :: !(NonEmpty State)
     }
 
-emptyPullRequest :: PullRequest
-emptyPullRequest = PullRequest
-    { prTitle = ""
-    , prAuthor = emptyActor
-    }
+{- | Fields of the @PullRequest@ object.
 
-pullRequest :: (PullRequest -> PullRequest) -> RepositoryPayload
-pullRequest setPullRequest = RepositoryPayload SRCPullRequests Connection
-    { last = 0
-    , states = []
-    , nodes = setPullRequest emptyPullRequest
-    }
+* https://developer.github.com/v4/object/issue/
+-}
+data PullRequestField
+    = PullRequestTitle
+    | PullRequestAuthor (NonEmpty AuthorField)
+
+{- | Smart constructor for the 'PullRequest' field of the 'RepositoryField'.
+-}
+pullRequests
+    :: PullRequestsArgs
+    -> NonEmpty (Connection PullRequests)
+    -> RepositoryField
+pullRequests pullRequestsArgs pullRequestsConnections =
+    RepositoryPullRequests PullRequests{..}
+
+{- | Generic type for connections since they share the same
+fields. Examples are:
+
+* IssueConnection: https://developer.github.com/v4/object/issueconnection/
+* PullRequestConnection: https://developer.github.com/v4/object/pullrequestconnection/
+-}
+data Connection obj
+    = Nodes !(NonEmpty (ObjectFields obj))
+    | Edges
+
+{- | Type-level function to map objects to their corresponding field types.
+-}
+type family ObjectFields (obj :: Type) :: Type where
+    ObjectFields Issues       = IssueField
+    ObjectFields PullRequests = PullRequestField
+--    ObjectFields _ = ... custom type error ...
+
+{- | Smart constructor for the 'Nodes' 'Connection'.
+-}
+nodes :: NonEmpty (ObjectFields obj) -> Connection obj
+nodes = Nodes
 
 
-newtype Actor = Actor
-    { actorLogin :: Text
-    }
+{- | Typeclass for objects that have a @title@ field.
+-}
+class HasTitle field where
+    title :: field
 
-emptyActor :: Actor
-emptyActor = Actor
-    { actorLogin = ""
-    }
+instance HasTitle IssueField where
+    title :: IssueField
+    title = IssueTitle
+
+instance HasTitle PullRequestField where
+    title :: PullRequestField
+    title = PullRequestTitle
+
+{- | Fields of the @Actor@ object.
+
+* https://developer.github.com/v4/interface/actor/
+-}
+-- TODO: rename data type to 'ActorField'?
+data AuthorField
+    = AuthorLogin
+    | AuthorResourcePath
+    | AuthorUrl
+
+login :: AuthorField
+login = AuthorLogin
+
+{- | Typeclass for objects that have an @author@ field.
+-}
+class HasAuthor field where
+    author :: NonEmpty AuthorField -> field
+
+instance HasAuthor IssueField where
+    author :: NonEmpty AuthorField -> IssueField
+    author = IssueAuthor
+
+instance HasAuthor PullRequestField where
+    author :: NonEmpty AuthorField -> PullRequestField
+    author = PullRequestAuthor
