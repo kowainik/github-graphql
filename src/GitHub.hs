@@ -15,6 +15,7 @@ module GitHub
       Repository (..)
     , RepositoryArgs (..)
     , repository
+    , repositoryToAst
 
       -- * Queries connections
       -- ** Issues
@@ -48,7 +49,8 @@ import Data.Kind (Type)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Text (Text)
 
-import GitHub.GraphQL (State (..))
+import GitHub.GraphQL (NodeName (..), ParamName (..), ParamValue (..), Query (..), QueryNode (..),
+                       QueryParam (..), State (..), mkQuery, nameNode)
 
 
 projectName :: String
@@ -86,9 +88,9 @@ query {
 -}
 exampleQuery :: Repository
 exampleQuery = repository
-    (RepositoryArgs { owner = "kowainik", name = "hit-on"})
+    (RepositoryArgs { repositoryArgsOwner = "kowainik", repositoryArgsName = "hit-on"})
     $ issues
-        (IssuesArgs { last = 3, states = one Open })
+        (IssuesArgs { issuesArgsLast = 3, issuesArgsStates = one Open })
         (one $ nodes $
            title :|
            [author $ one login]
@@ -112,13 +114,33 @@ data Repository = Repository
     , repositoryFields :: !(NonEmpty RepositoryField)
     }
 
+repositoryToAst :: Repository -> Query
+repositoryToAst Repository{..} = Query
+    [ QueryNode
+        { queryNodeName = NodeRepository
+        , queryNodeArgs = repositoryArgsToAst repositoryArgs
+        , queryNode     = mkQuery repositoryFieldToAst repositoryFields
+        }
+    ]
+
 {- | Arguments for the 'Repository' connection.
 -}
--- TODO: change field names to more verbose and add lenses
 data RepositoryArgs = RepositoryArgs
-    { owner :: !Text
-    , name  :: !Text
+    { repositoryArgsOwner :: !Text
+    , repositoryArgsName  :: !Text
     }
+
+repositoryArgsToAst :: RepositoryArgs -> [QueryParam]
+repositoryArgsToAst RepositoryArgs{..} =
+    [ QueryParam
+        { queryParamName = ParamOwner
+        , queryParamValue = ParamStringV repositoryArgsOwner
+        }
+    , QueryParam
+        { queryParamName = ParamName
+        , queryParamValue = ParamStringV repositoryArgsName
+        }
+    ]
 
 {- | Fields and connections of the @Repository@ object:
 
@@ -127,6 +149,11 @@ data RepositoryArgs = RepositoryArgs
 data RepositoryField
     = RepositoryIssues Issues
     | RepositoryPullRequests PullRequests
+
+repositoryFieldToAst :: RepositoryField -> QueryNode
+repositoryFieldToAst = \case
+    RepositoryIssues issuesField             -> issuesToAst issuesField
+    RepositoryPullRequests pullRequestsField -> pullRequestsToAst pullRequestsField
 
 {- | Smart constructor for the 'Repository' type.
 -}
@@ -143,12 +170,32 @@ data Issues = Issues
     , issuesConnections :: !(NonEmpty (Connection Issues))
     }
 
+issuesToAst :: Issues -> QueryNode
+issuesToAst Issues{..} = QueryNode
+    { queryNodeName = NodeIssues
+    , queryNodeArgs = issuesArgsToAst issuesArgs
+    , queryNode     = mkQuery (connectionToAst issueFieldToAst) issuesConnections
+    }
+
+
 {- | Arguments for the 'Issues' connection.
 -}
 data IssuesArgs = IssuesArgs
-    { last   :: !Int
-    , states :: !(NonEmpty State)
+    { issuesArgsLast   :: !Int
+    , issuesArgsStates :: !(NonEmpty State)
     }
+
+issuesArgsToAst :: IssuesArgs -> [QueryParam]
+issuesArgsToAst IssuesArgs{..} =
+    [ QueryParam
+        { queryParamName = ParamLast
+        , queryParamValue = ParamIntV issuesArgsLast
+        }
+    , QueryParam
+        { queryParamName = ParamStates
+        , queryParamValue = ParamStatesV issuesArgsStates
+        }
+    ]
 
 {- | Fields of the @Issue@ object.
 
@@ -157,6 +204,11 @@ data IssuesArgs = IssuesArgs
 data IssueField
     = IssueTitle
     | IssueAuthor (NonEmpty AuthorField)
+
+issueFieldToAst :: IssueField -> QueryNode
+issueFieldToAst = \case
+    IssueTitle               -> nameNode NodeTitle
+    IssueAuthor authorFields -> authorToAst authorFields
 
 {- | Smart constructor for the 'Issue' field of the 'RepositoryField'.
 -}
@@ -172,12 +224,31 @@ data PullRequests = PullRequests
     , pullRequestsConnections :: !(NonEmpty (Connection PullRequests))
     }
 
+pullRequestsToAst :: PullRequests -> QueryNode
+pullRequestsToAst PullRequests{..} = QueryNode
+    { queryNodeName = NodePullRequests
+    , queryNodeArgs = pullRequestsArgsToAst pullRequestsArgs
+    , queryNode     = mkQuery (connectionToAst pullRequestFieldToAst) pullRequestsConnections
+    }
+
 {- | Arguments for the 'PullRequest' connection.
 -}
 data PullRequestsArgs = PullRequestsArgs
     { pullRequestsLast   :: !Int
     , pullRequestsStates :: !(NonEmpty State)
     }
+
+pullRequestsArgsToAst :: PullRequestsArgs -> [QueryParam]
+pullRequestsArgsToAst PullRequestsArgs{..} =
+    [ QueryParam
+        { queryParamName = ParamLast
+        , queryParamValue = ParamIntV pullRequestsLast
+        }
+    , QueryParam
+        { queryParamName = ParamStates
+        , queryParamValue = ParamStatesV pullRequestsStates
+        }
+    ]
 
 {- | Fields of the @PullRequest@ object.
 
@@ -186,6 +257,11 @@ data PullRequestsArgs = PullRequestsArgs
 data PullRequestField
     = PullRequestTitle
     | PullRequestAuthor (NonEmpty AuthorField)
+
+pullRequestFieldToAst :: PullRequestField -> QueryNode
+pullRequestFieldToAst = \case
+    PullRequestTitle               -> nameNode NodeTitle
+    PullRequestAuthor authorFields -> authorToAst authorFields
 
 {- | Smart constructor for the 'PullRequest' field of the 'RepositoryField'.
 -}
@@ -205,6 +281,15 @@ fields. Examples are:
 data Connection obj
     = Nodes !(NonEmpty (ObjectFields obj))
     | Edges
+
+connectionToAst :: (ObjectFields obj -> QueryNode) -> Connection obj -> QueryNode
+connectionToAst objToAst = \case
+    Nodes fields -> QueryNode
+        { queryNodeName = NodeNodes
+        , queryNodeArgs = []
+        , queryNode = mkQuery objToAst fields
+        }
+    Edges -> nameNode NodeEdges
 
 {- | Type-level function to map objects to their corresponding field types.
 -}
@@ -241,6 +326,19 @@ data AuthorField
     = AuthorLogin
     | AuthorResourcePath
     | AuthorUrl
+
+authorToAst :: NonEmpty AuthorField -> QueryNode
+authorToAst authorFields = QueryNode
+    { queryNodeName = NodeAuthor
+    , queryNodeArgs = []
+    , queryNode     = mkQuery authorFieldToAst authorFields
+    }
+
+authorFieldToAst :: AuthorField -> QueryNode
+authorFieldToAst = \case
+    AuthorLogin        -> nameNode NodeLogin
+    AuthorResourcePath -> nameNode NodeResourcePath
+    AuthorUrl          -> nameNode NodeUrl
 
 login :: AuthorField
 login = AuthorLogin
