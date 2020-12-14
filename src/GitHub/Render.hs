@@ -37,12 +37,10 @@ renderQuery i Query{..} = T.intercalate "\n"
 renderQueryNode :: Int -> QueryNode -> Text
 renderQueryNode i QueryNode{..} =
     tab i <> renderNodeName queryNodeName
-    <> memptyIfFalse (null queryNodeArgs)
+    <> memptyIfTrue (null queryNodeArgs)
        (between "(" ")" (T.intercalate ", " $ map renderQueryParam queryNodeArgs))
-    <> memptyIfFalse (null $ unQuery queryNode)
-       ( between " {\n" ("\n" <> tab i <> "}")
-           (T.intercalate "\n" $ map (renderQueryNode (i + 1)) $ unQuery queryNode)
-       )
+    <> memptyIfTrue (null $ unQuery queryNode)
+       (between " {\n" ("\n" <> tab i <> "}") (renderQuery (i + 1) queryNode))
 
 renderNodeName :: NodeName -> Text
 renderNodeName = \case
@@ -90,5 +88,5 @@ between s e txt = s <> txt <> e
 tab :: Int -> Text
 tab i = stimes (i * 2) " "
 
-memptyIfFalse :: Bool -> Text -> Text
-memptyIfFalse p txt = if p then "" else txt
+memptyIfTrue :: Bool -> Text -> Text
+memptyIfTrue p txt = if p then "" else txt
