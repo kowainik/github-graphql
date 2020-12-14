@@ -1,7 +1,10 @@
 module Main (main) where
 
-import GitHub (projectName)
+import Test.Hspec (hspec)
+
+import Test.Render (renderSpecs)
 
 
 main :: IO ()
-main = putStrLn ("Tests for " ++ projectName)
+main = hspec
+    renderSpecs

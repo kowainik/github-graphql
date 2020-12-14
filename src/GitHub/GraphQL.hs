@@ -18,7 +18,6 @@ module GitHub.GraphQL
     , ParamName (..)
     , ParamValue (..)
     , State (..)
-    , renderQuery
     ) where
 
 import Data.List.NonEmpty (NonEmpty (..))
@@ -29,7 +28,7 @@ import qualified Data.List.NonEmpty as NE
 
 newtype Query = Query
     { unQuery :: [QueryNode]
-    }
+    } deriving stock (Show)
 
 {- | Smart constructor for creating 'Query' from 'NonEmpty' list (the
 most common case).
@@ -42,7 +41,7 @@ data QueryNode = QueryNode
     { queryNodeName :: !NodeName
     , queryNodeArgs :: ![QueryParam]
     , queryNode     :: !Query
-    }
+    } deriving stock (Show)
 
 {- | Create 'QueryNode' with node fields and no subquery. E.g. @title@
 or @name@ in the example below.
@@ -73,27 +72,28 @@ data NodeName
     | NodeUrl
     | NodeNodes
     | NodeEdges
+    deriving stock (Show)
 
 data QueryParam = QueryParam
     { queryParamName  :: !ParamName
     , queryParamValue :: !ParamValue
-    }
+    } deriving stock (Show)
 
 data ParamName
     = ParamOwner
     | ParamName
     | ParamLast
     | ParamStates
+    deriving stock (Show)
 
 data ParamValue
     = ParamStringV !Text
     | ParamIntV !Int
     | ParamStatesV !(NonEmpty State)
+    deriving stock (Show)
 
 data State
     = Open
     | Closed
     | Merged
-
-renderQuery :: Query -> Text
-renderQuery _ = ""
+    deriving stock (Show)
