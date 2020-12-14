@@ -7,11 +7,12 @@ on:
     branches: [main]
 
 jobs:
-  build:
-    name: ghc ${{ matrix.ghc }}
-    runs-on: ubuntu-latest
+  cabal:
+    name: ${{ matrix.os }} / ghc ${{ matrix.ghc }}
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
+        os: [ubuntu-latest]
         cabal: ["3.2"]
         ghc:
           - "8.8.4"
@@ -28,10 +29,15 @@ jobs:
         ghc-version: ${{ matrix.ghc }}
         cabal-version: ${{ matrix.cabal }}
 
-    - name: Freeze
-      run: cabal freeze
+    - name: Configure
+      run: |
+        cabal configure --enable-tests --enable-benchmarks --test-show-details=direct
 
-    - uses: actions/cache@v2
+    - name: Freeze
+      run: |
+        cabal freeze
+
+    - uses: actions/cache@v2.1.3
       name: Cache ~/.cabal/store
       with:
         path: ${{ steps.setup-haskell-cabal.outputs.cabal-store }}
@@ -39,11 +45,12 @@ jobs:
 
     - name: Install dependencies
       run: |
-        cabal configure --enable-tests --enable-benchmarks --test-show-details=direct
         cabal build all --only-dependencies
 
     - name: Build
-      run: cabal build all
+      run: |
+        cabal build all
 
     - name: Test
-      run: cabal test all
+      run: |
+        cabal test all
