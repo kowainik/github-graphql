@@ -73,7 +73,7 @@ renderParamName = \case
 
 renderParamValue :: ParamValue -> Text
 renderParamValue = \case
-    ParamStringV str -> "\"" <> str <> "\""
+    ParamStringV str -> T.pack $ show str
     ParamIntV i -> T.pack $ show i
     ParamStatesV (s :| ss) -> between "[" "]"
         $ T.intercalate ", " $ map renderState (s:ss)
