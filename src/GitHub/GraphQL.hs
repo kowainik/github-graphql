@@ -8,7 +8,11 @@ GraphQL AST.
 
 module GitHub.GraphQL
     ( Query (..)
+    , mkQuery
+
     , QueryNode (..)
+    , nameNode
+
     , NodeName (..)
     , QueryParam (..)
     , ParamName (..)
@@ -20,10 +24,19 @@ module GitHub.GraphQL
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Text (Text)
 
+import qualified Data.List.NonEmpty as NE
+
 
 newtype Query = Query
     { unQuery :: [QueryNode]
     }
+
+{- | Smart constructor for creating 'Query' from 'NonEmpty' list (the
+most common case).
+-}
+mkQuery :: (n -> QueryNode) -> NonEmpty n -> Query
+mkQuery toNode nodes =
+    Query $ NE.toList $ toNode <$> nodes
 
 data QueryNode = QueryNode
     { queryNodeName :: !NodeName
@@ -31,13 +44,35 @@ data QueryNode = QueryNode
     , queryNode     :: !Query
     }
 
+{- | Create 'QueryNode' with node fields and no subquery. E.g. @title@
+or @name@ in the example below.
+
+@
+nodes {
+    title
+    names
+}
+@
+-}
+nameNode :: NodeName -> QueryNode
+nameNode name = QueryNode
+    { queryNodeName = name
+    , queryNodeArgs = []
+    , queryNode     = Query []
+    }
+
 data NodeName
     = NodeRepository
     | NodeIssues
+    | NodePullRequests
     | NodeViewer
     | NodeTitle
     | NodeAuthor
     | NodeLogin
+    | NodeResourcePath
+    | NodeUrl
+    | NodeNodes
+    | NodeEdges
 
 data QueryParam = QueryParam
     { queryParamName  :: !ParamName
