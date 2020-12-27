@@ -11,7 +11,7 @@ Submit HTTPS query to to GitHub GraphQL API.
 -- TODO: better module name
 module GitHub.Query
     ( GitHubToken (..)
-    , callGitHub
+    , queryGitHub
     ) where
 
 import Control.Exception (throwIO)
@@ -34,15 +34,16 @@ newtype GitHubToken = GitHubToken
     }
 
 
-{- | Call GitHub API with a token
+{- | Call GitHub API with a token using 'Query' and return value that
+has 'FromJSON' instance.
 -}
-callGitHub
+queryGitHub
     :: forall a
     .  (Typeable a, FromJSON a)
     => GitHubToken  -- ^ Bearer token
     -> Query  -- ^ GraphQL query
     -> IO a
-callGitHub (GitHubToken token) query = do
+queryGitHub (GitHubToken token) query = do
     manager <- newTlsManager
 
     initialRequest <- parseRequest "https://api.github.com/graphql"
@@ -61,10 +62,10 @@ callGitHub (GitHubToken token) query = do
     response <- httpLbs request manager
 
     case statusCode $ responseStatus response of
-        200 -> case eitherDecode @(Data a) (responseBody response) of
+        200 -> case eitherDecode @(GitHubDataResponse a) (responseBody response) of
             Left err ->
                 throwIO $ userError $ "Error decoding JSON response: " <> err
-            Right (Data res) ->
+            Right (GitHubDataResponse res) ->
                 pure res
         code -> throwIO $ userError $ "Non-200 response code: " <> show code
 
@@ -79,12 +80,12 @@ API returns JSON of the following shape.
 
 This wrapper handles extra layer of @data@.
 -}
-newtype Data a = Data a
+newtype GitHubDataResponse a = GitHubDataResponse a
 
-instance (Typeable a, FromJSON a) => FromJSON (Data a) where
-    parseJSON = withObject (typeName @a) $ \o -> do
+instance (Typeable a, FromJSON a) => FromJSON (GitHubDataResponse a) where
+    parseJSON = withObject ("GitHubDataResponse " ++ typeName @a) $ \o -> do
         val <- o .: "data"
-        pure $ Data val
+        pure $ GitHubDataResponse val
 
 -- copy-pasted from @relude@
 typeName :: forall a. Typeable a => String
