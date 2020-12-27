@@ -65,8 +65,14 @@ library
   exposed-modules:     GitHub
                          GitHub.GraphQL
                          GitHub.Render
+                         GitHub.Query
 
-  build-depends:       text ^>= 1.2.3
+  build-depends:       aeson ^>= 1.5
+                     , bytestring ^>= 0.10
+                     , http-client ^>= 0.7
+                     , http-client-tls ^>= 0.3
+                     , http-types ^>= 0.12
+                     , text ^>= 1.2.3
 
 test-suite github-graphql-test
   import:              common-options
