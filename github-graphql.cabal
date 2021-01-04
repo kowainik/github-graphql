@@ -11,7 +11,7 @@ license:             MPL-2.0
 license-file:        LICENSE
 author:              Kowainik
 maintainer:          Kowainik <xrom.xkov@gmail.com>
-copyright:           2020 Kowainik
+copyright:           2021 Kowainik
 build-type:          Simple
 extra-doc-files:     README.md
                      CHANGELOG.md
@@ -63,8 +63,14 @@ library
   import:              common-options
   hs-source-dirs:      src
   exposed-modules:     GitHub
+                         GitHub.Author
+                         GitHub.Connection
                          GitHub.GraphQL
+                         GitHub.Issues
                          GitHub.Render
+                         GitHub.Repository
+                         GitHub.PullRequests
+                         GitHub.Title
                          GitHub.Query
 
   build-depends:       aeson ^>= 1.5
