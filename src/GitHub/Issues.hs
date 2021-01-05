@@ -1,3 +1,5 @@
+{-# LANGUAGE DataKinds #-}
+
 {- |
 Copyright: (c) 2021 Kowainik
 SPDX-License-Identifier: MPL-2.0
@@ -10,6 +12,8 @@ module GitHub.Issues
     ( -- * Data types
       Issues (..)
     , IssuesArgs (..)
+    , defIssuesArgs
+
     , IssueField (..)
 
       -- * AST functions
@@ -17,11 +21,13 @@ module GitHub.Issues
     ) where
 
 import Data.List.NonEmpty (NonEmpty (..))
+import Prolens (lens)
 
 import {-# SOURCE #-} GitHub.Author (AuthorField, authorToAst)
 import GitHub.Connection (Connection (..), connectionToAst)
 import GitHub.GraphQL (NodeName (..), ParamName (..), ParamValue (..), QueryNode (..),
                        QueryParam (..), State (..), mkQuery, nameNode)
+import GitHub.Lens (ArgsType (..), HasLimit (..), HasStates (..))
 
 
 {- | The @issues@ connection of the 'Repository' object.
@@ -29,7 +35,7 @@ import GitHub.GraphQL (NodeName (..), ParamName (..), ParamValue (..), QueryNode
 * https://developer.github.com/v4/object/repository/#connections
 -}
 data Issues = Issues
-    { issuesArgs        :: !IssuesArgs
+    { issuesArgs        :: !(IssuesArgs '[])
     , issuesConnections :: !(NonEmpty (Connection IssueField))
     }
 
@@ -42,12 +48,29 @@ issuesToAst Issues{..} = QueryNode
 
 {- | Arguments for the 'Issues' connection.
 -}
-data IssuesArgs = IssuesArgs
+data IssuesArgs (args :: [ArgsType]) = IssuesArgs
     { issuesArgsLast   :: !Int
     , issuesArgsStates :: !(NonEmpty State)
     }
 
-issuesArgsToAst :: IssuesArgs -> [QueryParam]
+instance HasLimit IssuesArgs where
+    lastL = lens issuesArgsLast (\args new -> args { issuesArgsLast = new })
+    {-# INLINE lastL #-}
+
+instance HasStates IssuesArgs where
+    statesL = lens issuesArgsStates (\args new -> args { issuesArgsStates = new })
+    {-# INLINE statesL #-}
+
+{- | Default value of 'IssuesArgs'. Use methods of 'HasLimit' and
+'HasStates' to change its fields.
+-}
+defIssuesArgs :: IssuesArgs '[ 'ArgsLimit, 'ArgsStates ]
+defIssuesArgs = IssuesArgs
+    { issuesArgsLast = -1
+    , issuesArgsStates = Open :| []
+    }
+
+issuesArgsToAst :: IssuesArgs '[] -> [QueryParam]
 issuesArgsToAst IssuesArgs{..} =
     [ QueryParam
         { queryParamName = ParamLast

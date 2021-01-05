@@ -25,17 +25,25 @@ module GitHub
     , module GitHub.Author
     , module GitHub.Title
 
+      -- * General tools to work with API
+      -- ** Using lenses to change fields
+    , module GitHub.Lens
+
       -- * Temp
     , exampleQuery
     , projectName
     ) where
 
+import Data.Function ((&))
 import Data.List.NonEmpty (NonEmpty (..))
+import Prolens (set)
+
 
 import GitHub.Author
 import GitHub.Connection
 import GitHub.GraphQL (State (..))
 import GitHub.Issues
+import GitHub.Lens
 import GitHub.PullRequests
 import GitHub.Repository
 import GitHub.Title
@@ -76,19 +84,27 @@ query {
 -}
 exampleQuery :: Repository
 exampleQuery = repository
-    (RepositoryArgs { repositoryArgsOwner = "kowainik", repositoryArgsName = "hit-on"})
+    ( defRepositoryArgs
+    & set ownerL "kowainik"
+    & set nameL  "hit-on"
+    )
     $ issues
-        (IssuesArgs { issuesArgsLast = 3, issuesArgsStates = one Open })
+        ( defIssuesArgs
+        & set lastL 3
+        & set statesL (one Open)
+        )
         (one $ nodes $
            title :|
            [author $ one login]
         )
     :|
     [ pullRequests
-        (PullRequestsArgs { pullRequestsLast = 3, pullRequestsStates = one Open })
+        ( defPullRequestsArgs
+        & set lastL 3
+        & set statesL (one Open)
+        )
         (one $ nodes $
            title :|
            [author $ one login]
         )
-
     ]

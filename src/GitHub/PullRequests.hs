@@ -1,3 +1,5 @@
+{-# LANGUAGE DataKinds #-}
+
 {- |
 Copyright: (c) 2021 Kowainik
 SPDX-License-Identifier: MPL-2.0
@@ -10,6 +12,8 @@ module GitHub.PullRequests
     ( -- * Data types
       PullRequests (..)
     , PullRequestsArgs (..)
+    , defPullRequestsArgs
+
     , PullRequestField (..)
 
       -- * AST functions
@@ -17,11 +21,13 @@ module GitHub.PullRequests
     ) where
 
 import Data.List.NonEmpty (NonEmpty (..))
+import Prolens (lens)
 
 import {-# SOURCE #-} GitHub.Author (AuthorField, authorToAst)
 import GitHub.Connection (Connection (..), connectionToAst)
 import GitHub.GraphQL (NodeName (..), ParamName (..), ParamValue (..), QueryNode (..),
                        QueryParam (..), State (..), mkQuery, nameNode)
+import GitHub.Lens (ArgsType (..), HasLimit (..), HasStates (..))
 
 
 {- | The @pullRequests@ connection of the 'Repository' object.
@@ -29,7 +35,7 @@ import GitHub.GraphQL (NodeName (..), ParamName (..), ParamValue (..), QueryNode
 * https://developer.github.com/v4/object/repository/#connections
 -}
 data PullRequests = PullRequests
-    { pullRequestsArgs        :: !PullRequestsArgs
+    { pullRequestsArgs        :: !(PullRequestsArgs '[])
     , pullRequestsConnections :: !(NonEmpty (Connection PullRequestField))
     }
 
@@ -42,20 +48,37 @@ pullRequestsToAst PullRequests{..} = QueryNode
 
 {- | Arguments for the 'PullRequest' connection.
 -}
-data PullRequestsArgs = PullRequestsArgs
-    { pullRequestsLast   :: !Int
-    , pullRequestsStates :: !(NonEmpty State)
+data PullRequestsArgs (args :: [ArgsType]) = PullRequestsArgs
+    { pullRequestsArgsLast   :: !Int
+    , pullRequestsArgsStates :: !(NonEmpty State)
     }
 
-pullRequestsArgsToAst :: PullRequestsArgs -> [QueryParam]
+instance HasLimit PullRequestsArgs where
+    lastL = lens pullRequestsArgsLast (\args new -> args { pullRequestsArgsLast = new })
+    {-# INLINE lastL #-}
+
+instance HasStates PullRequestsArgs where
+    statesL = lens pullRequestsArgsStates (\args new -> args { pullRequestsArgsStates = new })
+    {-# INLINE statesL #-}
+
+{- | Default value of 'PullRequestsArgs'. Use methods of 'HasLimit' and
+'HasStates' to change its fields.
+-}
+defPullRequestsArgs :: PullRequestsArgs '[ 'ArgsLimit, 'ArgsStates ]
+defPullRequestsArgs = PullRequestsArgs
+    { pullRequestsArgsLast = -1
+    , pullRequestsArgsStates = Open :| []
+    }
+
+pullRequestsArgsToAst :: PullRequestsArgs '[] -> [QueryParam]
 pullRequestsArgsToAst PullRequestsArgs{..} =
     [ QueryParam
         { queryParamName = ParamLast
-        , queryParamValue = ParamIntV pullRequestsLast
+        , queryParamValue = ParamIntV pullRequestsArgsLast
         }
     , QueryParam
         { queryParamName = ParamStates
-        , queryParamValue = ParamStatesV pullRequestsStates
+        , queryParamValue = ParamStatesV pullRequestsArgsStates
         }
     ]
 
