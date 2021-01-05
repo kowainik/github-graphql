@@ -30,17 +30,17 @@ module GitHub.Repository
 import Data.Kind (Constraint)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Text (Text)
-import GHC.TypeLits (ErrorMessage (..), Symbol)
 import Prolens (lens)
-import Type.Errors.Pretty (TypeError, type (%), type (<>))
+import Type.Errors.Pretty (TypeError, type (%))
 
 import GitHub.Connection (Connection (..))
 import GitHub.GraphQL (NodeName (..), ParamName (..), ParamValue (..), Query (..), QueryNode (..),
                        QueryParam (..), mkQuery)
 import GitHub.Issues (IssueField, Issues (..), IssuesArgs, issuesToAst)
-import GitHub.Lens (ArgsType (..), HasOwnerName (..))
+import GitHub.Lens (NameL (..), OwnerL (..))
 import GitHub.PullRequests (PullRequestField, PullRequests (..), PullRequestsArgs,
                             pullRequestsToAst)
+import GitHub.RequiredField (DisplayFields, RequiredField (..))
 
 
 {- | The @Repository@ top-level connection:
@@ -49,9 +49,9 @@ import GitHub.PullRequests (PullRequestField, PullRequests (..), PullRequestsArg
 -}
 data Repository where
     Repository
-        :: forall args
-        .  HasNoRepositoryArgs args
-        => { repositoryArgs   :: !(RepositoryArgs args)
+        :: forall fields
+        .  CheckFieldsRepositoryArgs fields
+        => { repositoryArgs   :: !(RepositoryArgs fields)
            , repositoryFields :: !(NonEmpty RepositoryField)
            }
         -> Repository
@@ -67,21 +67,23 @@ repositoryToAst Repository{..} = Query
 
 {- | Arguments for the 'Repository' connection.
 -}
-data RepositoryArgs (args :: [ArgsType]) = RepositoryArgs
+data RepositoryArgs (fields :: [RequiredField]) = RepositoryArgs
     { repositoryArgsOwner :: !Text
     , repositoryArgsName  :: !Text
     }
 
-instance HasOwnerName RepositoryArgs where
+instance OwnerL RepositoryArgs where
     ownerL = lens repositoryArgsOwner (\args new -> args { repositoryArgsOwner = new })
     {-# INLINE ownerL #-}
+
+instance NameL RepositoryArgs where
     nameL = lens repositoryArgsName (\args new -> args { repositoryArgsName = new })
     {-# INLINE nameL #-}
 
 {- | Default value of 'RepositoryArgs'. Use methods of 'HasOwnerName'
 to change its fields.
 -}
-defRepositoryArgs :: RepositoryArgs [ 'ArgsOwner, 'ArgsName ]
+defRepositoryArgs :: RepositoryArgs [ 'FieldOwner, 'FieldName ]
 defRepositoryArgs = RepositoryArgs
     { repositoryArgsOwner = ""
     , repositoryArgsName  = ""
@@ -115,8 +117,8 @@ repositoryFieldToAst = \case
 {- | Smart constructor for the 'Repository' type.
 -}
 repository
-    :: HasNoRepositoryArgs args
-    => RepositoryArgs args
+    :: CheckFieldsRepositoryArgs fields
+    => RepositoryArgs fields
     -> NonEmpty RepositoryField
     -> Repository
 repository repositoryArgs repositoryFields = Repository{..}
@@ -135,21 +137,17 @@ pullRequests
 pullRequests pullRequestsArgs pullRequestsConnections =
     RepositoryPullRequests PullRequests{..}
 
-type family HasNoRepositoryArgs (args :: [ArgsType]) :: Constraint where
-    HasNoRepositoryArgs '[]  = (() :: Constraint)
-    HasNoRepositoryArgs args = TypeError
+type family CheckFieldsRepositoryArgs (fields :: [RequiredField]) :: Constraint where
+    CheckFieldsRepositoryArgs '[]  = (() :: Constraint)
+    CheckFieldsRepositoryArgs fields = TypeError
         ( "You haven't set the following required fields of 'RepositoryArgs':"
         % ""
-        % PrintArgs args
-        % "Use corresponding lenses to set values of the fields"
+        % DisplayFields fields
+        % "Use corresponding lenses to set values of the fields."
+        % "Typically, you set values of this type using lenses like so:"
+        % ""
+        % "    defRepositoryArgs"
+        % "    & set ownerL \"owner-name\""
+        % "    & set nameL \"repository-name\""
+        % ""
         )
-
-type family PrintArgs (args :: [ArgsType]) :: ErrorMessage where
-    PrintArgs '[] = 'Text ""
-    PrintArgs (x ': xs) = ("    * " <> ShowArg x) % PrintArgs xs
-
-type family ShowArg (arg :: ArgsType) :: Symbol where
-    ShowArg 'ArgsOwner  = "owner"
-    ShowArg 'ArgsName   = "name"
-    ShowArg 'ArgsLimit  = "last or first"
-    ShowArg 'ArgsStates = "states"

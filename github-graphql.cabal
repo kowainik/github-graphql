@@ -68,9 +68,10 @@ library
                          GitHub.GraphQL
                          GitHub.Issues
                          GitHub.Lens
+                         GitHub.PullRequests
                          GitHub.Render
                          GitHub.Repository
-                         GitHub.PullRequests
+                         GitHub.RequiredField
                          GitHub.Title
                          GitHub.Query
 

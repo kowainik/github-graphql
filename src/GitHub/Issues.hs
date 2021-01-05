@@ -27,7 +27,8 @@ import {-# SOURCE #-} GitHub.Author (AuthorField, authorToAst)
 import GitHub.Connection (Connection (..), connectionToAst)
 import GitHub.GraphQL (NodeName (..), ParamName (..), ParamValue (..), QueryNode (..),
                        QueryParam (..), State (..), mkQuery, nameNode)
-import GitHub.Lens (ArgsType (..), HasLimit (..), HasStates (..))
+import GitHub.Lens (LimitL (..), StatesL (..))
+import GitHub.RequiredField (RequiredField (..))
 
 
 {- | The @issues@ connection of the 'Repository' object.
@@ -48,23 +49,23 @@ issuesToAst Issues{..} = QueryNode
 
 {- | Arguments for the 'Issues' connection.
 -}
-data IssuesArgs (args :: [ArgsType]) = IssuesArgs
+data IssuesArgs (fields :: [RequiredField]) = IssuesArgs
     { issuesArgsLast   :: !Int
     , issuesArgsStates :: !(NonEmpty State)
     }
 
-instance HasLimit IssuesArgs where
+instance LimitL IssuesArgs where
     lastL = lens issuesArgsLast (\args new -> args { issuesArgsLast = new })
     {-# INLINE lastL #-}
 
-instance HasStates IssuesArgs where
+instance StatesL IssuesArgs where
     statesL = lens issuesArgsStates (\args new -> args { issuesArgsStates = new })
     {-# INLINE statesL #-}
 
 {- | Default value of 'IssuesArgs'. Use methods of 'HasLimit' and
 'HasStates' to change its fields.
 -}
-defIssuesArgs :: IssuesArgs '[ 'ArgsLimit, 'ArgsStates ]
+defIssuesArgs :: IssuesArgs '[ 'FieldLimit, 'FieldStates ]
 defIssuesArgs = IssuesArgs
     { issuesArgsLast = -1
     , issuesArgsStates = Open :| []

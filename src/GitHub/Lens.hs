@@ -8,19 +8,18 @@ Copyright: (c) 2021 Kowainik
 SPDX-License-Identifier: MPL-2.0
 Maintainer: Kowainik <xrom.xkov@gmail.com>
 
-Utilities to provide general @lens@-like API for creating GraphQL
+Typeclasses for providing @lens@-like API for creating GraphQL
 queries.
 -}
 
 module GitHub.Lens
-    ( HasOwnerName (..)
-    , HasLimit (..)
-    , HasStates (..)
+    ( -- * Typeclasses with lenses
+      LimitL (..)
+    , NameL (..)
+    , OwnerL (..)
+    , StatesL (..)
 
-      -- * Parameter types
-    , ArgsType (..)
-
-      -- * Internas
+      -- * Internals
     , Delete
     ) where
 
@@ -30,32 +29,29 @@ import Data.Text (Text)
 import Prolens (Lens)
 
 import GitHub.GraphQL (State)
+import GitHub.RequiredField (RequiredField (..))
 
-
-{- | Type of fields for arguments.
--}
-data ArgsType
-    = ArgsOwner
-    | ArgsName
-    | ArgsLimit
-    | ArgsStates
-
-{- | Typeclass for lenses that can change owner and name
--}
-class HasOwnerName (r :: [ArgsType] -> Type) where
-    ownerL :: Lens (r args) (r (Delete 'ArgsOwner args)) Text Text
-    nameL  :: Lens (r args) (r (Delete 'ArgsName args)) Text Text
 
 {- | Typeclass for lenses that can change the limit of elements.
 -}
-class HasLimit (r :: [ArgsType] -> Type) where
-    lastL  :: Lens (r args) (r (Delete 'ArgsLimit args)) Int Int
+class LimitL (r :: [RequiredField] -> Type) where
+    lastL  :: Lens (r args) (r (Delete 'FieldLimit args)) Int Int
     -- firstL :: Lens (r args) (r (Delete 'ArgsLimit args)) Int Int
+
+{- | Typeclass for lenses that can change owner.
+-}
+class OwnerL (r :: [RequiredField] -> Type) where
+    ownerL :: Lens (r args) (r (Delete 'FieldOwner args)) Text Text
+
+{- | Typeclass for lenses that can change name.
+-}
+class NameL (r :: [RequiredField] -> Type) where
+    nameL  :: Lens (r args) (r (Delete 'FieldName args)) Text Text
 
 {- | Typeclass for lenses that can change states.
 -}
-class HasStates (r :: [ArgsType] -> Type) where
-    statesL :: Lens (r args) (r (Delete 'ArgsStates args)) (NonEmpty State) (NonEmpty State)
+class StatesL (r :: [RequiredField] -> Type) where
+    statesL :: Lens (r args) (r (Delete 'FieldStates args)) (NonEmpty State) (NonEmpty State)
 
 
 -- Internal helpers

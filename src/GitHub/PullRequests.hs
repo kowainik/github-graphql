@@ -27,7 +27,8 @@ import {-# SOURCE #-} GitHub.Author (AuthorField, authorToAst)
 import GitHub.Connection (Connection (..), connectionToAst)
 import GitHub.GraphQL (NodeName (..), ParamName (..), ParamValue (..), QueryNode (..),
                        QueryParam (..), State (..), mkQuery, nameNode)
-import GitHub.Lens (ArgsType (..), HasLimit (..), HasStates (..))
+import GitHub.Lens (LimitL (..), StatesL (..))
+import GitHub.RequiredField (RequiredField (..))
 
 
 {- | The @pullRequests@ connection of the 'Repository' object.
@@ -48,23 +49,23 @@ pullRequestsToAst PullRequests{..} = QueryNode
 
 {- | Arguments for the 'PullRequest' connection.
 -}
-data PullRequestsArgs (args :: [ArgsType]) = PullRequestsArgs
+data PullRequestsArgs (fields :: [RequiredField]) = PullRequestsArgs
     { pullRequestsArgsLast   :: !Int
     , pullRequestsArgsStates :: !(NonEmpty State)
     }
 
-instance HasLimit PullRequestsArgs where
+instance LimitL PullRequestsArgs where
     lastL = lens pullRequestsArgsLast (\args new -> args { pullRequestsArgsLast = new })
     {-# INLINE lastL #-}
 
-instance HasStates PullRequestsArgs where
+instance StatesL PullRequestsArgs where
     statesL = lens pullRequestsArgsStates (\args new -> args { pullRequestsArgsStates = new })
     {-# INLINE statesL #-}
 
 {- | Default value of 'PullRequestsArgs'. Use methods of 'HasLimit' and
 'HasStates' to change its fields.
 -}
-defPullRequestsArgs :: PullRequestsArgs '[ 'ArgsLimit, 'ArgsStates ]
+defPullRequestsArgs :: PullRequestsArgs '[ 'FieldLimit, 'FieldStates ]
 defPullRequestsArgs = PullRequestsArgs
     { pullRequestsArgsLast = -1
     , pullRequestsArgsStates = Open :| []
