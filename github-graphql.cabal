@@ -67,9 +67,11 @@ library
                          GitHub.Connection
                          GitHub.GraphQL
                          GitHub.Issues
+                         GitHub.Lens
+                         GitHub.PullRequests
                          GitHub.Render
                          GitHub.Repository
-                         GitHub.PullRequests
+                         GitHub.RequiredField
                          GitHub.Title
                          GitHub.Query
 
@@ -78,7 +80,9 @@ library
                      , http-client ^>= 0.7
                      , http-client-tls ^>= 0.3
                      , http-types ^>= 0.12
+                     , prolens ^>= 0.0
                      , text ^>= 1.2.3
+                     , type-errors-pretty ^>= 0.0.1.1
 
 test-suite github-graphql-test
   import:              common-options
