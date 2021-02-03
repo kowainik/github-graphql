@@ -36,6 +36,8 @@ data RequiredField
     | FieldName  -- ^ name
     | FieldLimit  -- ^ first or last
     | FieldStates  -- ^ states
+    | FieldDirection  -- ^ direction
+    | FieldField  -- ^ field
 
 {- Display all requires fields with their lens hints.
 -}
@@ -59,3 +61,9 @@ type family FieldNameAndLens (field :: RequiredField) :: ErrorMessage where
     FieldNameAndLens 'FieldStates =
         "    * states"
       % "        Lens: nameL from GitHub.Lens.StatesL"
+    FieldNameAndLens 'FieldDirection =
+        "    * direction"
+      % "        Lens: directionL from GitHub.Lens.DirectionL"
+    FieldNameAndLens 'FieldField =
+        "    * field"
+      % "        Lens: fieldL from GitHub.Lens.FieldL"

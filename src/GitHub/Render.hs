@@ -21,8 +21,8 @@ import Data.List.NonEmpty (NonEmpty (..))
 import Data.Semigroup (stimes)
 import Data.Text (Text)
 
-import GitHub.GraphQL (NodeName (..), ParamName (..), ParamValue (..), Query (..), QueryNode (..),
-                       QueryParam (..), State (..))
+import GitHub.GraphQL (IssueOrderField (..), NodeName (..), OrderDirection (..), ParamName (..),
+                       ParamValue (..), Query (..), QueryNode (..), QueryParam (..), State (..))
 
 import qualified Data.Text as T
 
@@ -64,10 +64,13 @@ renderQueryParam QueryParam{..} =
 
 renderParamName :: ParamName -> Text
 renderParamName = \case
-    ParamOwner  -> "owner"
-    ParamName   -> "name"
-    ParamLast   -> "last"
-    ParamStates -> "states"
+    ParamOwner     -> "owner"
+    ParamName      -> "name"
+    ParamLast      -> "last"
+    ParamStates    -> "states"
+    ParamOrderBy   -> "orderBy"
+    ParamField     -> "field"
+    ParamDirection -> "direction"
 
 renderParamValue :: ParamValue -> Text
 renderParamValue = \case
@@ -75,12 +78,27 @@ renderParamValue = \case
     ParamIntV i -> T.pack $ show i
     ParamStatesV (s :| ss) -> between "[" "]"
         $ T.intercalate ", " $ map renderState (s:ss)
+    ParamIssueOrderField io -> renderIssueOrderField io
+    ParamOrderDirection d -> renderOrderDirection d
+    ParamRecordV (p :| ps) -> between "{" "}"
+        $ T.intercalate ", " $ map renderQueryParam (p:ps)
 
 renderState :: State -> Text
 renderState = \case
     Open   -> "OPEN"
     Closed -> "CLOSED"
     Merged -> "MERGED"
+
+renderIssueOrderField :: IssueOrderField -> Text
+renderIssueOrderField = \case
+    Comments  -> "COMMENTS"
+    CreatedAt -> "CREATED_AT"
+    UpdatedAt -> "UPDATED_AT"
+
+renderOrderDirection :: OrderDirection -> Text
+renderOrderDirection = \case
+    Asc  -> "ASC"
+    Desc -> "DESC"
 
 between :: Text -> Text -> Text -> Text
 between s e txt = s <> txt <> e

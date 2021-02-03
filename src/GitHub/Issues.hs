@@ -13,21 +13,27 @@ module GitHub.Issues
       Issues (..)
     , IssuesArgs (..)
     , defIssuesArgs
+    , issueOrderL
+
+    , IssueOrder (..)
+    , defIssueOrder
 
     , IssueField (..)
 
       -- * AST functions
     , issuesToAst
+    , issueOrderToAst
     ) where
 
 import Data.List.NonEmpty (NonEmpty (..))
-import Prolens (lens)
+import Prolens (Lens', lens)
 
 import {-# SOURCE #-} GitHub.Author (AuthorField, authorToAst)
 import GitHub.Connection (Connection (..), connectionToAst)
-import GitHub.GraphQL (NodeName (..), ParamName (..), ParamValue (..), QueryNode (..),
-                       QueryParam (..), State (..), mkQuery, nameNode)
-import GitHub.Lens (LimitL (..), StatesL (..))
+import GitHub.GraphQL (IssueOrderField (..), NodeName (..), OrderDirection (..), ParamName (..),
+                       ParamValue (..), QueryNode (..), QueryParam (..), State (..), mkQuery,
+                       nameNode)
+import GitHub.Lens (DirectionL (..), FieldL (..), LimitL (..), StatesL (..))
 import GitHub.RequiredField (RequiredField (..))
 
 
@@ -50,8 +56,9 @@ issuesToAst Issues{..} = QueryNode
 {- | Arguments for the 'Issues' connection.
 -}
 data IssuesArgs (fields :: [RequiredField]) = IssuesArgs
-    { issuesArgsLast   :: !Int
-    , issuesArgsStates :: !(NonEmpty State)
+    { issuesArgsLast    :: !Int
+    , issuesArgsStates  :: !(NonEmpty State)
+    , issuesArgsOrderBy :: !(Maybe (IssueOrder '[]))
     }
 
 instance LimitL IssuesArgs where
@@ -62,13 +69,17 @@ instance StatesL IssuesArgs where
     statesL = lens issuesArgsStates (\args new -> args { issuesArgsStates = new })
     {-# INLINE statesL #-}
 
-{- | Default value of 'IssuesArgs'. Use methods of 'HasLimit' and
-'HasStates' to change its fields.
+issueOrderL :: Lens' (IssuesArgs fields) (Maybe (IssueOrder '[]))
+issueOrderL = lens issuesArgsOrderBy (\args new -> args { issuesArgsOrderBy = new })
+
+{- | Default value of 'IssuesArgs'. Use methods of 'LimitL' and
+'StatesL' to change its fields.
 -}
 defIssuesArgs :: IssuesArgs '[ 'FieldLimit, 'FieldStates ]
 defIssuesArgs = IssuesArgs
-    { issuesArgsLast = -1
-    , issuesArgsStates = Open :| []
+    { issuesArgsLast    = -1
+    , issuesArgsStates  = Open :| []
+    , issuesArgsOrderBy = Nothing
     }
 
 issuesArgsToAst :: IssuesArgs '[] -> [QueryParam]
@@ -82,6 +93,49 @@ issuesArgsToAst IssuesArgs{..} =
         , queryParamValue = ParamStatesV issuesArgsStates
         }
     ]
+    ++ maybe [] (\io -> [issueOrderToAst io]) issuesArgsOrderBy
+
+{- | Connection parameter to specify issue order:
+
+https://docs.github.com/en/graphql/reference/input-objects#issueorder
+-}
+data IssueOrder (fields :: [RequiredField]) = IssueOrder
+   { issueOrderDirection :: !OrderDirection
+   , issueOrderField     :: !IssueOrderField
+   }
+
+instance DirectionL IssueOrder where
+    directionL = lens issueOrderDirection (\args new -> args { issueOrderDirection = new })
+    {-# INLINE directionL #-}
+
+instance FieldL IssueOrder where
+    fieldL = lens issueOrderField (\args new -> args { issueOrderField = new })
+    {-# INLINE fieldL #-}
+
+{- | Default value of 'IssuesOrder'. Use methods of 'FieldL' and
+'DirectionL' to change its fields.
+-}
+defIssueOrder :: IssueOrder '[ 'FieldDirection, 'FieldField ]
+defIssueOrder = IssueOrder
+    { issueOrderDirection = Asc
+    , issueOrderField = CreatedAt
+    }
+
+issueOrderToAst :: IssueOrder '[] -> QueryParam
+issueOrderToAst IssueOrder{..} = QueryParam
+    { queryParamName = ParamOrderBy
+    , queryParamValue = ParamRecordV
+        $ QueryParam
+            { queryParamName = ParamField
+            , queryParamValue = ParamIssueOrderField issueOrderField
+            }
+        :|
+        [ QueryParam
+            { queryParamName = ParamDirection
+            , queryParamValue = ParamOrderDirection issueOrderDirection
+            }
+        ]
+    }
 
 {- | Fields of the @Issue@ object.
 

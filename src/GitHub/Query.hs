@@ -52,10 +52,10 @@ maybeToken <- 'getGitHubToken' "GITHUB_TOKEN"
 Returns 'Nothing' if the given environment variable name doesn't exist.
 -}
 getGitHubToken :: String -> IO (Maybe GitHubToken)
-getGitHubToken varName = lookupEnv varName >>= \case
-    Nothing    -> pure Nothing
-    Just token -> pure $ Just $ GitHubToken $ Text.encodeUtf8 $ Text.pack token
-
+getGitHubToken varName = fmap encodeToken <$> lookupEnv varName
+  where
+    encodeToken :: String -> GitHubToken
+    encodeToken = GitHubToken . Text.encodeUtf8 . Text.pack
 
 {- | Call GitHub API with a token using 'Query' and return value that
 has 'FromJSON' instance.
