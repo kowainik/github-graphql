@@ -46,7 +46,7 @@ newtype GitHubToken = GitHubToken
 Typical usage:
 
 @
-maybeToken <- 'getGitHubToken' "GITHUB_TOKEN"
+maybeToken <- 'getGitHubToken' \"GITHUB_TOKEN\"
 @
 
 Returns 'Nothing' if the given environment variable name doesn't exist.

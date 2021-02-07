@@ -118,8 +118,20 @@ data ParamValue
     -}
     | ParamStatesV !(NonEmpty State)
 
+    {- | Issues order field:
+
+    @
+    field: CREATED_AT
+    @
+    -}
     | ParamIssueOrderField !IssueOrderField
 
+    {- | Direction of order:
+
+    @
+    direction: ASC
+    @
+    -}
     | ParamOrderDirection !OrderDirection
 
     {- | Record parameters:
