@@ -10,7 +10,11 @@ Submit HTTPS query to to GitHub GraphQL API.
 
 -- TODO: better module name
 module GitHub.Query
-    ( GitHubToken (..)
+    ( -- * Token
+      GitHubToken (..)
+    , getGitHubToken
+
+      -- * API
     , queryGitHub
     ) where
 
@@ -21,10 +25,14 @@ import Network.HTTP.Client (RequestBody (RequestBodyLBS), httpLbs, method, parse
                             requestBody, requestHeaders, responseBody, responseStatus)
 import Network.HTTP.Client.TLS (newTlsManager)
 import Network.HTTP.Types.Status (statusCode)
+import System.Environment (lookupEnv)
 import Type.Reflection (Typeable, typeRep)
 
 import GitHub.GraphQL (Query)
 import GitHub.Render (renderTopQuery)
+
+import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
 
 
 {- | GitHub OAuth token.
@@ -33,6 +41,21 @@ newtype GitHubToken = GitHubToken
     { unGitHubToken :: ByteString
     }
 
+{- | Extract 'GitHubToken' from the given environment variable.
+
+Typical usage:
+
+@
+maybeToken <- 'getGitHubToken' \"GITHUB_TOKEN\"
+@
+
+Returns 'Nothing' if the given environment variable name doesn't exist.
+-}
+getGitHubToken :: String -> IO (Maybe GitHubToken)
+getGitHubToken varName = fmap encodeToken <$> lookupEnv varName
+  where
+    encodeToken :: String -> GitHubToken
+    encodeToken = GitHubToken . Text.encodeUtf8 . Text.pack
 
 {- | Call GitHub API with a token using 'Query' and return value that
 has 'FromJSON' instance.

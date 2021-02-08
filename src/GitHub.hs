@@ -7,8 +7,11 @@ GraphQL bindings to GitHub API.
 -}
 
 module GitHub
-    ( -- * Top-level queries
-      module GitHub.Repository
+    ( -- * Querying GitHub
+      module GitHub.Query
+
+      -- * Top-level queries
+    , module GitHub.Repository
 
       -- * Queries connections
       -- ** Issues
@@ -25,6 +28,9 @@ module GitHub
     , module GitHub.Author
     , module GitHub.Title
 
+      -- * Low-level AST fields
+    , module GitHub.GraphQL
+
       -- * General tools to work with API
       -- ** Using lenses to change fields
     , module GitHub.Lens
@@ -32,6 +38,7 @@ module GitHub
       -- * Temp
     , exampleQuery
     , projectName
+    , one
     ) where
 
 import Data.Function ((&))
@@ -41,10 +48,11 @@ import Prolens (set)
 
 import GitHub.Author
 import GitHub.Connection
-import GitHub.GraphQL (State (..))
+import GitHub.GraphQL (IssueOrderField (..), OrderDirection (..), State (..))
 import GitHub.Issues
 import GitHub.Lens
 import GitHub.PullRequests
+import GitHub.Query
 import GitHub.Repository
 import GitHub.Title
 

@@ -17,6 +17,10 @@ module GitHub.GraphQL
     , QueryParam (..)
     , ParamName (..)
     , ParamValue (..)
+
+      -- * Enums
+    , IssueOrderField (..)
+    , OrderDirection (..)
     , State (..)
     ) where
 
@@ -84,16 +88,75 @@ data ParamName
     | ParamName
     | ParamLast
     | ParamStates
+    | ParamOrderBy
+    | ParamField
+    | ParamDirection
     deriving stock (Show)
 
 data ParamValue
+    {- | Textual parameter:
+
+    @
+    name: "github-graphql"
+    @
+    -}
     = ParamStringV !Text
+
+    {- | Integer parameter:
+
+    @
+    last: 2
+    @
+    -}
     | ParamIntV !Int
+
+    {- | Issue/PR states:
+
+    @
+    states: [CLOSED, MERGED]"
+    @
+    -}
     | ParamStatesV !(NonEmpty State)
+
+    {- | Issues order field:
+
+    @
+    field: CREATED_AT
+    @
+    -}
+    | ParamIssueOrderField !IssueOrderField
+
+    {- | Direction of order:
+
+    @
+    direction: ASC
+    @
+    -}
+    | ParamOrderDirection !OrderDirection
+
+    {- | Record parameters:
+
+    @
+    orderBy: {field: CREATED_AT, direction: DESC}
+    @
+    -}
+    | ParamRecordV !(NonEmpty QueryParam)
     deriving stock (Show)
 
+-- TODO: rename to PullRequestState
 data State
     = Open
     | Closed
     | Merged
+    deriving stock (Show)
+
+data IssueOrderField
+    = Comments
+    | CreatedAt
+    | UpdatedAt
+    deriving stock (Show)
+
+data OrderDirection
+    = Asc
+    | Desc
     deriving stock (Show)

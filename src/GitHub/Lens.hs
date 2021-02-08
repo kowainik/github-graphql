@@ -14,7 +14,9 @@ queries.
 
 module GitHub.Lens
     ( -- * Typeclasses with lenses
-      LimitL (..)
+      DirectionL (..)
+    , FieldL (..)
+    , LimitL (..)
     , NameL (..)
     , OwnerL (..)
     , StatesL (..)
@@ -28,7 +30,7 @@ import Data.List.NonEmpty (NonEmpty)
 import Data.Text (Text)
 import Prolens (Lens)
 
-import GitHub.GraphQL (State)
+import GitHub.GraphQL (IssueOrderField, OrderDirection, State)
 import GitHub.RequiredField (RequiredField (..))
 
 
@@ -53,6 +55,15 @@ class NameL (r :: [RequiredField] -> Type) where
 class StatesL (r :: [RequiredField] -> Type) where
     statesL :: Lens (r args) (r (Delete 'FieldStates args)) (NonEmpty State) (NonEmpty State)
 
+{- | Typeclass for lenses that can change issue order field.
+-}
+class FieldL (r :: [RequiredField] -> Type) where
+    fieldL :: Lens (r args) (r (Delete 'FieldField args)) IssueOrderField IssueOrderField
+
+{- | Typeclass for lenses that can change order direction.
+-}
+class DirectionL (r :: [RequiredField] -> Type) where
+    directionL :: Lens (r args) (r (Delete 'FieldDirection args)) OrderDirection OrderDirection
 
 -- Internal helpers
 
