@@ -9,7 +9,8 @@ Data types and helper functions to work with @issues@.
 -}
 
 module GitHub.Issues
-    ( -- * Data types
+    ( -- * Query
+      -- ** Data types
       Issues (..)
     , IssuesArgs (..)
     , defIssuesArgs
@@ -20,20 +21,34 @@ module GitHub.Issues
 
     , IssueField (..)
 
-      -- * AST functions
+      -- ** AST functions
     , issuesToAst
     , issueOrderToAst
+
+      -- * Mutation
+      -- ** Data types
+    , CreateIssue (..)
+    , CreateIssueInput (..)
+    , defCreateIssueInput
+    , milestoneIdL
+
+      -- ** AST functions
+    , createIssueToAst
     ) where
 
 import Data.List.NonEmpty (NonEmpty (..))
+import Data.Text (Text)
 import Prolens (Lens', lens)
 
-import {-# SOURCE #-} GitHub.Author (AuthorField, authorToAst)
+import {-# SOURCE #-} GitHub.Author (AuthorField, authorToAst, authorToMutationNode)
 import GitHub.Connection (Connection (..), connectionToAst)
-import GitHub.GraphQL (IssueOrderField (..), NodeName (..), OrderDirection (..), ParamName (..),
-                       ParamValue (..), QueryNode (..), QueryParam (..), State (..), mkQuery,
+import GitHub.GraphQL (IssueOrderField (..), Mutation (..), MutationFun (..), MutationNode (..),
+                       NodeName (..), OrderDirection (..), ParamName (..), ParamValue (..),
+                       QueryNode (..), QueryParam (..), State (..), mkQuery, nameMutationNode,
                        nameNode)
-import GitHub.Lens (DirectionL (..), FieldL (..), LimitL (..), StatesL (..))
+import GitHub.Id (Id (..), MilestoneId, RepositoryId)
+import GitHub.Lens (DirectionL (..), FieldL (..), LimitL (..), RepositoryIdL (..), StatesL (..),
+                    TitleL (..))
 import GitHub.RequiredField (RequiredField (..))
 
 
@@ -149,3 +164,82 @@ issueFieldToAst :: IssueField -> QueryNode
 issueFieldToAst = \case
     IssueTitle               -> nameNode NodeTitle
     IssueAuthor authorFields -> authorToAst authorFields
+
+issueFieldToMutationNode :: IssueField -> MutationNode
+issueFieldToMutationNode = \case
+    IssueTitle               -> nameMutationNode NodeTitle
+    IssueAuthor authorFields -> authorToMutationNode authorFields
+
+{- | Data type for creating issue.
+
+* https://docs.github.com/en/graphql/reference/mutations#createissue
+-}
+data CreateIssue = CreateIssue
+    { createIssueInput  :: !(CreateIssueInput '[])
+    , createIssueFields :: ![IssueField]
+    }
+
+createIssueToAst :: CreateIssue -> Mutation
+createIssueToAst CreateIssue{..} = Mutation
+    [ MutationFun
+        { mutationFunName = NodeCreateIssue
+        , mutationFunInput = createIssueInputToAst createIssueInput
+        , mutationFunReturning = map issueFieldToMutationNode createIssueFields
+        }
+    ]
+
+{- | Arguments for the 'CreateIssue' mutation.
+
+* https://docs.github.com/en/graphql/reference/input-objects#createissueinput
+-}
+data CreateIssueInput (fields :: [RequiredField]) = CreateIssueInput
+    { createIssueInputRepositoryId :: !RepositoryId
+    , createIssueInputTitle        :: !Text
+    , createIssueInputMilestoneId  :: !(Maybe MilestoneId)
+    }
+
+instance RepositoryIdL CreateIssueInput where
+    repositoryIdL = lens createIssueInputRepositoryId (\args new -> args { createIssueInputRepositoryId = new })
+    {-# INLINE repositoryIdL #-}
+
+instance TitleL CreateIssueInput where
+    titleL = lens createIssueInputTitle (\args new -> args { createIssueInputTitle = new })
+    {-# INLINE titleL #-}
+
+milestoneIdL :: Lens' (CreateIssueInput fields) (Maybe MilestoneId)
+milestoneIdL = lens
+    createIssueInputMilestoneId
+    (\args new -> args { createIssueInputMilestoneId = new })
+
+{- | Default value of 'CreateIssueInput'. Use methods of 'TitleL' and
+'RepositoryIdL' to change its fields.
+-}
+defCreateIssueInput :: CreateIssueInput '[ 'FieldRepositoryId, 'FieldTitle ]
+defCreateIssueInput = CreateIssueInput
+    { createIssueInputRepositoryId = Id ""
+    , createIssueInputTitle = ""
+    , createIssueInputMilestoneId = Nothing
+    }
+
+createIssueInputToAst :: CreateIssueInput '[] -> NonEmpty QueryParam
+createIssueInputToAst CreateIssueInput{..} =
+    QueryParam
+        { queryParamName = ParamRepositoryId
+        , queryParamValue = ParamStringV $ unId createIssueInputRepositoryId
+        }
+    :|
+    [ QueryParam
+        { queryParamName = ParamTitle
+        , queryParamValue = ParamStringV createIssueInputTitle
+        }
+    ]
+    ++ maybe
+        []
+        (\(Id milestoneId) ->
+            [ QueryParam
+                { queryParamName = ParamMilestoneId
+                , queryParamValue = ParamStringV milestoneId
+                }
+            ]
+        )
+        createIssueInputMilestoneId

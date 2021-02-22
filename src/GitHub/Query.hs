@@ -16,11 +16,15 @@ module GitHub.Query
 
       -- * API
     , queryGitHub
+    , mutationGitHub
+      -- ** Internals
+    , callGitHubRaw
     ) where
 
 import Control.Exception (throwIO)
 import Data.Aeson (FromJSON (..), eitherDecode, encode, object, withObject, (.:), (.=))
 import Data.ByteString (ByteString)
+import Data.Text (Text)
 import Network.HTTP.Client (RequestBody (RequestBodyLBS), httpLbs, method, parseRequest,
                             requestBody, requestHeaders, responseBody, responseStatus)
 import Network.HTTP.Client.TLS (newTlsManager)
@@ -28,8 +32,8 @@ import Network.HTTP.Types.Status (statusCode)
 import System.Environment (lookupEnv)
 import Type.Reflection (Typeable, typeRep)
 
-import GitHub.GraphQL (Query)
-import GitHub.Render (renderTopQuery)
+import GitHub.GraphQL (Mutation, Query)
+import GitHub.Render (renderTopMutation, renderTopQuery)
 
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
@@ -66,11 +70,32 @@ queryGitHub
     => GitHubToken  -- ^ Bearer token
     -> Query  -- ^ GraphQL query
     -> IO a
-queryGitHub (GitHubToken token) query = do
+queryGitHub token = callGitHubRaw token . renderTopQuery
+
+{- | Call GitHub API with a token using 'Mutation' and return value that
+has 'FromJSON' instance.
+-}
+mutationGitHub
+    :: forall a
+    .  (Typeable a, FromJSON a)
+    => GitHubToken  -- ^ Bearer token
+    -> Mutation  -- ^ GraphQL mutation
+    -> IO a
+mutationGitHub token = callGitHubRaw token . renderTopMutation
+
+{- | Call GitHub API with a token using raw text.
+-}
+callGitHubRaw
+    :: forall a
+    .  (Typeable a, FromJSON a)
+    => GitHubToken  -- ^ Bearer token
+    -> Text  -- ^ GraphQL query
+    -> IO a
+callGitHubRaw (GitHubToken token) text = do
     manager <- newTlsManager
 
     initialRequest <- parseRequest "https://api.github.com/graphql"
-    let queryBody = object ["query" .= renderTopQuery query]
+    let queryBody = object ["query" .= text]
 
     let request = initialRequest
             { method = "POST"

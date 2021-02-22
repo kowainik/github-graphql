@@ -35,6 +35,9 @@ module GitHub
       -- ** Using lenses to change fields
     , module GitHub.Lens
 
+      -- * General types
+    , module GitHub.Id
+
       -- * Temp
     , exampleQuery
     , projectName
@@ -49,6 +52,7 @@ import Prolens (set)
 import GitHub.Author
 import GitHub.Connection
 import GitHub.GraphQL (IssueOrderField (..), OrderDirection (..), State (..))
+import GitHub.Id
 import GitHub.Issues
 import GitHub.Lens
 import GitHub.PullRequests

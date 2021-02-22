@@ -66,6 +66,7 @@ library
                          GitHub.Author
                          GitHub.Connection
                          GitHub.GraphQL
+                         GitHub.Id
                          GitHub.Issues
                          GitHub.Lens
                          GitHub.PullRequests

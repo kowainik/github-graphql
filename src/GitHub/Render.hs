@@ -7,25 +7,26 @@ GraphQL AST renderer.
 -}
 
 module GitHub.Render
-    ( renderTopQuery
-    , renderQuery
-    , renderQueryNode
-    , renderNodeName
-    , renderQueryParam
-    , renderParamName
-    , renderParamValue
-    , renderState
+    ( -- * Query
+      renderTopQuery
+
+      -- * Query
+    , renderTopMutation
     ) where
 
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Semigroup (stimes)
 import Data.Text (Text)
 
-import GitHub.GraphQL (IssueOrderField (..), NodeName (..), OrderDirection (..), ParamName (..),
-                       ParamValue (..), Query (..), QueryNode (..), QueryParam (..), State (..))
+import GitHub.GraphQL (IssueOrderField (..), Mutation (..), MutationFun (..), MutationNode (..),
+                       NodeName (..), OrderDirection (..), ParamName (..), ParamValue (..),
+                       Query (..), QueryNode (..), QueryParam (..), State (..))
 
 import qualified Data.Text as T
 
+----------------------------------------------------------------------------
+-- Query
+----------------------------------------------------------------------------
 
 renderTopQuery :: Query -> Text
 renderTopQuery q = "query {\n" <> renderQuery 1 q <> "\n}\n"
@@ -55,6 +56,7 @@ renderNodeName = \case
     NodeUrl          -> "url"
     NodeNodes        -> "nodes"
     NodeEdges        -> "edges"
+    NodeCreateIssue  -> "createIssue"
 
 renderQueryParam :: QueryParam -> Text
 renderQueryParam QueryParam{..} =
@@ -64,13 +66,17 @@ renderQueryParam QueryParam{..} =
 
 renderParamName :: ParamName -> Text
 renderParamName = \case
-    ParamOwner     -> "owner"
-    ParamName      -> "name"
-    ParamLast      -> "last"
-    ParamStates    -> "states"
-    ParamOrderBy   -> "orderBy"
-    ParamField     -> "field"
-    ParamDirection -> "direction"
+    ParamOwner        -> "owner"
+    ParamName         -> "name"
+    ParamTitle        -> "title"
+    ParamLast         -> "last"
+    ParamStates       -> "states"
+    ParamOrderBy      -> "orderBy"
+    ParamField        -> "field"
+    ParamDirection    -> "direction"
+    ParamInput        -> "input"
+    ParamRepositoryId -> "repositoryId"
+    ParamMilestoneId  -> "milestoneId"
 
 renderParamValue :: ParamValue -> Text
 renderParamValue = \case
@@ -99,6 +105,44 @@ renderOrderDirection :: OrderDirection -> Text
 renderOrderDirection = \case
     Asc  -> "ASC"
     Desc -> "DESC"
+
+----------------------------------------------------------------------------
+-- Mutation
+----------------------------------------------------------------------------
+
+renderTopMutation :: Mutation -> Text
+renderTopMutation (Mutation funs) =
+    "mutation {\n" <> T.intercalate "\n" (map renderMutationFun funs) <> "\n}\n"
+
+renderMutationFun :: MutationFun -> Text
+renderMutationFun MutationFun{..} =
+    tab 1
+    <> renderNodeName mutationFunName
+    <> between "(" ")" (renderQueryParam inputParam)
+    <> renderMutationNodes 2 mutationFunReturning
+  where
+    inputParam :: QueryParam
+    inputParam = QueryParam
+        { queryParamName  = ParamInput
+        , queryParamValue = ParamRecordV mutationFunInput
+        }
+
+renderMutationNodes :: Int -> [MutationNode] -> Text
+renderMutationNodes i nodes = memptyIfTrue
+    (null nodes)
+    ( between " {\n" ("\n" <> tab (i - 1) <> "}")
+    $ T.intercalate "\n"
+    $ map (\n -> tab i <> renderMutationNode i n) nodes
+    )
+
+renderMutationNode :: Int -> MutationNode -> Text
+renderMutationNode i MutationNode{..} =
+    renderNodeName mutationNodeName
+    <> renderMutationNodes (i + 1) mutationNodeChildren
+
+----------------------------------------------------------------------------
+-- Utils
+----------------------------------------------------------------------------
 
 between :: Text -> Text -> Text -> Text
 between s e txt = s <> txt <> e
