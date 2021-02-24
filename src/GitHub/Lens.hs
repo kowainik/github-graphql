@@ -19,7 +19,9 @@ module GitHub.Lens
     , LimitL (..)
     , NameL (..)
     , OwnerL (..)
+    , RepositoryIdL (..)
     , StatesL (..)
+    , TitleL (..)
 
       -- * Internals
     , Delete
@@ -31,6 +33,7 @@ import Data.Text (Text)
 import Prolens (Lens)
 
 import GitHub.GraphQL (IssueOrderField, OrderDirection, State)
+import GitHub.Id (RepositoryId)
 import GitHub.RequiredField (RequiredField (..))
 
 
@@ -64,6 +67,16 @@ class FieldL (r :: [RequiredField] -> Type) where
 -}
 class DirectionL (r :: [RequiredField] -> Type) where
     directionL :: Lens (r args) (r (Delete 'FieldDirection args)) OrderDirection OrderDirection
+
+{- | Typeclass for lenses that can change title.
+-}
+class TitleL (r :: [RequiredField] -> Type) where
+    titleL :: Lens (r args) (r (Delete 'FieldTitle args)) Text Text
+
+{- | Typeclass for lenses that can change repository id.
+-}
+class RepositoryIdL (r :: [RequiredField] -> Type) where
+    repositoryIdL :: Lens (r args) (r (Delete 'FieldRepositoryId args)) RepositoryId RepositoryId
 
 -- Internal helpers
 

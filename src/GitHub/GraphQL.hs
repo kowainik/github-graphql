@@ -7,9 +7,11 @@ GraphQL AST.
 -}
 
 module GitHub.GraphQL
-    ( Query (..)
+    ( -- * Query
+      -- ** Top-level AST types
+      Query (..)
     , mkQuery
-
+      -- ** Nested AST types
     , QueryNode (..)
     , nameNode
 
@@ -17,6 +19,12 @@ module GitHub.GraphQL
     , QueryParam (..)
     , ParamName (..)
     , ParamValue (..)
+
+      -- * Mutation
+    , Mutation (..)
+    , MutationFun (..)
+    , MutationNode (..)
+    , nameMutationNode
 
       -- * Enums
     , IssueOrderField (..)
@@ -29,6 +37,9 @@ import Data.Text (Text)
 
 import qualified Data.List.NonEmpty as NE
 
+----------------------------------------------------------------------------
+-- Queries
+----------------------------------------------------------------------------
 
 newtype Query = Query
     { unQuery :: [QueryNode]
@@ -66,6 +77,7 @@ nameNode name = QueryNode
 
 data NodeName
     = NodeRepository
+    | NodeIssue
     | NodeIssues
     | NodePullRequests
     | NodeViewer
@@ -76,6 +88,7 @@ data NodeName
     | NodeUrl
     | NodeNodes
     | NodeEdges
+    | NodeCreateIssue
     deriving stock (Show)
 
 data QueryParam = QueryParam
@@ -86,11 +99,15 @@ data QueryParam = QueryParam
 data ParamName
     = ParamOwner
     | ParamName
+    | ParamTitle
     | ParamLast
     | ParamStates
     | ParamOrderBy
     | ParamField
     | ParamDirection
+    | ParamInput
+    | ParamRepositoryId
+    | ParamMilestoneId
     deriving stock (Show)
 
 data ParamValue
@@ -142,6 +159,38 @@ data ParamValue
     -}
     | ParamRecordV !(NonEmpty QueryParam)
     deriving stock (Show)
+
+----------------------------------------------------------------------------
+-- Mutation
+----------------------------------------------------------------------------
+
+newtype Mutation = Mutation
+    { unMutation :: [MutationFun]
+    } deriving stock (Show)
+
+data MutationFun = MutationFun
+    { mutationFunName      :: !NodeName
+    , mutationFunInput     :: !(NonEmpty QueryParam)
+    , mutationFunReturning :: ![MutationNode]
+    } deriving stock (Show)
+
+-- TODO: maybe think how to unify with QueryNode?
+data MutationNode = MutationNode
+    { mutationNodeName     :: !NodeName
+    , mutationNodeChildren :: ![MutationNode]
+    } deriving stock (Show)
+
+{- | Similar to 'nameNode' but for 'MutationNode'.
+-}
+nameMutationNode :: NodeName -> MutationNode
+nameMutationNode name = MutationNode
+    { mutationNodeName = name
+    , mutationNodeChildren = []
+    }
+
+----------------------------------------------------------------------------
+-- Enums
+----------------------------------------------------------------------------
 
 -- TODO: rename to PullRequestState
 data State

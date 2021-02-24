@@ -34,10 +34,12 @@ import Type.Errors.Pretty (type (%))
 data RequiredField
     = FieldOwner  -- ^ owner
     | FieldName  -- ^ name
+    | FieldTitle  -- ^ title
     | FieldLimit  -- ^ first or last
     | FieldStates  -- ^ states
     | FieldDirection  -- ^ direction
     | FieldField  -- ^ field
+    | FieldRepositoryId  -- ^ repositoryId
 
 {- Display all requires fields with their lens hints.
 -}
@@ -55,6 +57,9 @@ type family FieldNameAndLens (field :: RequiredField) :: ErrorMessage where
     FieldNameAndLens 'FieldName =
         "    * name"
       % "        Lens: nameL from GitHub.Lens.NameL"
+    FieldNameAndLens 'FieldTitle =
+        "    * title"
+      % "        Lens: titleL from GitHub.Lens.TitleL"
     FieldNameAndLens 'FieldLimit =
         "    * last or first"
       % "        Lens: nameL from GitHub.Lens.LimitL"
@@ -67,3 +72,6 @@ type family FieldNameAndLens (field :: RequiredField) :: ErrorMessage where
     FieldNameAndLens 'FieldField =
         "    * field"
       % "        Lens: fieldL from GitHub.Lens.FieldL"
+    FieldNameAndLens 'FieldRepositoryId =
+        "    * repositoryId"
+      % "        Lens: repositoryIdL from GitHub.Lens.RepositoryIdL"
