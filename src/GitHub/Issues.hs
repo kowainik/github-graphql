@@ -184,7 +184,12 @@ createIssueToAst CreateIssue{..} = Mutation
     [ MutationFun
         { mutationFunName = NodeCreateIssue
         , mutationFunInput = createIssueInputToAst createIssueInput
-        , mutationFunReturning = map issueFieldToMutationNode createIssueFields
+        , mutationFunReturning =
+            [ MutationNode
+                { mutationNodeName = NodeIssue
+                , mutationNodeChildren = map issueFieldToMutationNode createIssueFields
+                }
+            ]
         }
     ]
 

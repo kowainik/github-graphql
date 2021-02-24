@@ -77,6 +77,7 @@ nameNode name = QueryNode
 
 data NodeName
     = NodeRepository
+    | NodeIssue
     | NodeIssues
     | NodePullRequests
     | NodeViewer

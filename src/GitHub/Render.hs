@@ -46,6 +46,7 @@ renderQueryNode i QueryNode{..} =
 renderNodeName :: NodeName -> Text
 renderNodeName = \case
     NodeRepository   -> "repository"
+    NodeIssue        -> "issue"
     NodeIssues       -> "issues"
     NodePullRequests -> "pullRequests"
     NodeViewer       -> "viewer"
