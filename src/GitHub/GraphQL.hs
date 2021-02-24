@@ -30,6 +30,9 @@ module GitHub.GraphQL
     , IssueOrderField (..)
     , OrderDirection (..)
     , State (..)
+
+      -- * Utils
+    , one
     ) where
 
 import Data.List.NonEmpty (NonEmpty (..))
@@ -89,6 +92,7 @@ data NodeName
     | NodeNodes
     | NodeEdges
     | NodeCreateIssue
+    | NodeId
     deriving stock (Show)
 
 data QueryParam = QueryParam
@@ -209,3 +213,12 @@ data OrderDirection
     = Asc
     | Desc
     deriving stock (Show)
+
+----------------------------------------------------------------------------
+-- Utils
+----------------------------------------------------------------------------
+
+{- | Helper function to construct singleton 'NonEmpty' lists.
+-}
+one :: a -> NonEmpty a
+one x = x :| []

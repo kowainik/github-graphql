@@ -21,6 +21,7 @@ module GitHub.Id
     , RepositoryId
     ) where
 
+import Data.Aeson (FromJSON (..), withObject, (.:))
 import Data.Text (Text)
 
 
@@ -29,7 +30,11 @@ represent different types of IDs.
 -}
 newtype Id (idType :: IdType) = Id
    { unId :: Text
-   }
+   } deriving stock (Show)
+     deriving newtype (Eq, Ord)
+
+instance FromJSON (Id idType) where
+    parseJSON = withObject "Id" $ \o -> Id <$> (o .: "id")
 
 data IdType
     = IDRepository

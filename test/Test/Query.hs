@@ -9,13 +9,18 @@ import Data.Text (Text)
 import Prolens (set)
 import Test.Hspec (Spec, describe, it, shouldReturn)
 
+import Test.Data (githubGraphqlRepositoryId)
+
 import qualified GitHub as GH
 
 
-querySpecs :: Spec
-querySpecs = describe "Query" $ do
+querySpecs :: GH.GitHubToken -> Spec
+querySpecs token = describe "Query" $ do
+    it "queries the 'github-graphql' repository id" $
+        GH.queryRepositoryId token "kowainik" "github-graphql"
+            `shouldReturn` githubGraphqlRepositoryId
     it "queries to latest closed issues of 'kowainik/hit-on'" $
-        queryHitonIssues `shouldReturn` Issues
+        queryHitonIssues token `shouldReturn` Issues
             [ Issue
                 { issueTitle = "Implement \"git-new\"-like command: `hit hop`"
                 , issueAuthorLogin = "chshersh"
@@ -26,10 +31,8 @@ querySpecs = describe "Query" $ do
                 }
             ]
 
-queryHitonIssues :: IO Issues
-queryHitonIssues = GH.getGitHubToken "GITHUB_TOKEN" >>= \case
-    Nothing    -> error "No env variable 'GITHUB_TOKEN'"
-    Just token -> GH.queryGitHub token (GH.repositoryToAst issuesQuery)
+queryHitonIssues :: GH.GitHubToken -> IO Issues
+queryHitonIssues token = GH.queryGitHub token (GH.repositoryToAst issuesQuery)
 
 {-
 query {

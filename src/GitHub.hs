@@ -37,21 +37,11 @@ module GitHub
 
       -- * General types
     , module GitHub.Id
-
-      -- * Temp
-    , exampleQuery
-    , projectName
-    , one
     ) where
-
-import Data.Function ((&))
-import Data.List.NonEmpty (NonEmpty (..))
-import Prolens (set)
-
 
 import GitHub.Author
 import GitHub.Connection
-import GitHub.GraphQL (IssueOrderField (..), OrderDirection (..), State (..))
+import GitHub.GraphQL (IssueOrderField (..), OrderDirection (..), State (..), one)
 import GitHub.Id
 import GitHub.Issues
 import GitHub.Lens
@@ -59,64 +49,3 @@ import GitHub.PullRequests
 import GitHub.Query
 import GitHub.Repository
 import GitHub.Title
-
-
-projectName :: String
-projectName = "github-graphql"
-
--- TODO: temporary helper function
-one :: a -> NonEmpty a
-one x = x :| []
-
-{- Example of the following GraphQL query:
-
-@
-query {
-  repository(owner: "kowainik", name: "hit-on") {
-    issues(last: 3, states: [OPEN]) {
-        nodes {
-          title
-          author{
-            login
-          }
-        }
-    }
-
-    pullRequests(last: 3, states: [OPEN]) {
-        nodes {
-          title
-          author {
-            login
-          }
-        }
-    }
-  }
-}
-@
--}
-exampleQuery :: Repository
-exampleQuery = repository
-    ( defRepositoryArgs
-    & set ownerL "kowainik"
-    & set nameL  "hit-on"
-    )
-    $ issues
-        ( defIssuesArgs
-        & set lastL 3
-        & set statesL (one Open)
-        )
-        (one $ nodes $
-           title :|
-           [author $ one login]
-        )
-    :|
-    [ pullRequests
-        ( defPullRequestsArgs
-        & set lastL 3
-        & set statesL (one Open)
-        )
-        (one $ nodes $
-           title :|
-           [author $ one login]
-        )
-    ]
