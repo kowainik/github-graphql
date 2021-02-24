@@ -10,7 +10,7 @@ module GitHub.Render
     ( -- * Query
       renderTopQuery
 
-      -- * Query
+      -- * Mutation
     , renderTopMutation
     ) where
 
