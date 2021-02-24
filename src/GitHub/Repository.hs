@@ -16,6 +16,7 @@ module GitHub.Repository
     ( -- * Data types
       Repository (..)
     , RepositoryArgs (..)
+    , RepositoryField (..)
     , defRepositoryArgs
 
       -- * Smart constructors
@@ -35,7 +36,7 @@ import Type.Errors.Pretty (TypeError, type (%))
 
 import GitHub.Connection (Connection (..))
 import GitHub.GraphQL (NodeName (..), ParamName (..), ParamValue (..), Query (..), QueryNode (..),
-                       QueryParam (..), mkQuery)
+                       QueryParam (..), mkQuery, nameNode)
 import GitHub.Issues (IssueField, Issues (..), IssuesArgs, issuesToAst)
 import GitHub.Lens (NameL (..), OwnerL (..))
 import GitHub.PullRequests (PullRequestField, PullRequests (..), PullRequestsArgs,
@@ -108,11 +109,13 @@ repositoryArgsToAst RepositoryArgs{..} =
 data RepositoryField
     = RepositoryIssues Issues
     | RepositoryPullRequests PullRequests
+    | RepositoryId
 
 repositoryFieldToAst :: RepositoryField -> QueryNode
 repositoryFieldToAst = \case
     RepositoryIssues issuesField             -> issuesToAst issuesField
     RepositoryPullRequests pullRequestsField -> pullRequestsToAst pullRequestsField
+    RepositoryId                             -> nameNode NodeId
 
 {- | Smart constructor for the 'Repository' type.
 -}

@@ -90,7 +90,8 @@ test-suite github-graphql-test
   type:                exitcode-stdio-1.0
   hs-source-dirs:      test
   main-is:             Spec.hs
-  other-modules:       Test.Query
+  other-modules:       Test.Data
+                       Test.Query
                        Test.Render
   build-depends:       aeson
                      , github-graphql

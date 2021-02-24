@@ -58,6 +58,7 @@ renderNodeName = \case
     NodeNodes        -> "nodes"
     NodeEdges        -> "edges"
     NodeCreateIssue  -> "createIssue"
+    NodeId           -> "id"
 
 renderQueryParam :: QueryParam -> Text
 renderQueryParam QueryParam{..} =

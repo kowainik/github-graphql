@@ -15,7 +15,10 @@ module GitHub.Query
     , getGitHubToken
 
       -- * API
+      -- ** Queries
     , queryGitHub
+    , queryRepositoryId
+      -- ** Mutations
     , mutationGitHub
       -- ** Internals
     , callGitHubRaw
@@ -24,19 +27,25 @@ module GitHub.Query
 import Control.Exception (throwIO)
 import Data.Aeson (FromJSON (..), eitherDecode, encode, object, withObject, (.:), (.=))
 import Data.ByteString (ByteString)
+import Data.Function ((&))
 import Data.Text (Text)
 import Network.HTTP.Client (RequestBody (RequestBodyLBS), httpLbs, method, parseRequest,
                             requestBody, requestHeaders, responseBody, responseStatus)
 import Network.HTTP.Client.TLS (newTlsManager)
 import Network.HTTP.Types.Status (statusCode)
+import Prolens (set)
 import System.Environment (lookupEnv)
 import Type.Reflection (Typeable, typeRep)
 
-import GitHub.GraphQL (Mutation, Query)
+import GitHub.GraphQL (Mutation, Query, one)
+import GitHub.Id (RepositoryId)
 import GitHub.Render (renderTopMutation, renderTopQuery)
 
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
+
+import qualified GitHub.Lens as GH
+import qualified GitHub.Repository as GH
 
 
 {- | GitHub OAuth token.
@@ -71,6 +80,48 @@ queryGitHub
     -> Query  -- ^ GraphQL query
     -> IO a
 queryGitHub token = callGitHubRaw token . renderTopQuery
+
+{- | Helper function to fetch 'RepositoryId'. It is often needed as
+argument to other queries.
+
+This function parses resulting JSON of the following shape:
+
+@
+{
+  "data": {
+    "repository": {
+      "id": "MDEwOlJlcG9zaXRvcnkyOTA1MDA2MzI="
+    }
+  }
+}
+@
+-}
+queryRepositoryId
+    :: GitHubToken  -- ^ Bearer token
+    -> Text  -- ^ Owner
+    -> Text  -- ^ Repository name
+    -> IO RepositoryId
+queryRepositoryId token owner repoName =
+    fmap unRepositoryData
+    $ queryGitHub @(RepositoryData RepositoryId) token
+    $ GH.repositoryToAst repositoryIdQuery
+  where
+    repositoryIdQuery :: GH.Repository
+    repositoryIdQuery = GH.repository
+        ( GH.defRepositoryArgs
+        & set GH.ownerL owner
+        & set GH.nameL  repoName
+        )
+        $ one GH.RepositoryId
+
+-- | Wrapper to parse values inside the "repository" object key.
+newtype RepositoryData a = RepositoryData
+    { unRepositoryData :: a
+    }
+
+instance (Typeable a, FromJSON a) => FromJSON (RepositoryData a) where
+    parseJSON = withObject ("RepositoryData " ++ typeName @a) $ \o ->
+        RepositoryData <$> (o .: "repository")
 
 {- | Call GitHub API with a token using 'Mutation' and return value that
 has 'FromJSON' instance.
