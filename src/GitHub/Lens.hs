@@ -1,7 +1,9 @@
-{-# LANGUAGE DataKinds     #-}
-{-# LANGUAGE PolyKinds     #-}
-{-# LANGUAGE TypeFamilies  #-}
-{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE DataKinds              #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE MultiParamTypeClasses  #-}
+{-# LANGUAGE PolyKinds              #-}
+{-# LANGUAGE TypeFamilies           #-}
+{-# LANGUAGE TypeOperators          #-}
 
 {- |
 Copyright: (c) 2021 Kowainik
@@ -32,7 +34,7 @@ import Data.List.NonEmpty (NonEmpty)
 import Data.Text (Text)
 import Prolens (Lens)
 
-import GitHub.GraphQL (IssueOrderField, OrderDirection, State)
+import GitHub.GraphQL (IssueOrderField, OrderDirection)
 import GitHub.Id (RepositoryId)
 import GitHub.RequiredField (RequiredField (..))
 
@@ -55,8 +57,8 @@ class NameL (r :: [RequiredField] -> Type) where
 
 {- | Typeclass for lenses that can change states.
 -}
-class StatesL (r :: [RequiredField] -> Type) where
-    statesL :: Lens (r args) (r (Delete 'FieldStates args)) (NonEmpty State) (NonEmpty State)
+class StatesL (r :: [RequiredField] -> Type) (state :: Type) | r -> state where
+    statesL :: Lens (r args) (r (Delete 'FieldStates args)) (NonEmpty state) (NonEmpty state)
 
 {- | Typeclass for lenses that can change issue order field.
 -}

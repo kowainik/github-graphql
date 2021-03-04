@@ -55,6 +55,7 @@ common common-options
                        RecordWildCards
                        ScopedTypeVariables
                        StandaloneDeriving
+                       StrictData
                        TupleSections
                        TypeApplications
                        ViewPatterns
@@ -68,13 +69,15 @@ library
                          GitHub.GraphQL
                          GitHub.Id
                          GitHub.Issues
+                         GitHub.Label
                          GitHub.Lens
                          GitHub.PullRequests
                          GitHub.Render
+                         GitHub.Query
                          GitHub.Repository
                          GitHub.RequiredField
                          GitHub.Title
-                         GitHub.Query
+                         GitHub.User
 
   build-depends:       aeson ^>= 1.5
                      , bytestring ^>= 0.10

@@ -1,4 +1,5 @@
-{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 {- |
 Copyright: (c) 2021 Kowainik
@@ -25,8 +26,8 @@ import Prolens (lens)
 
 import {-# SOURCE #-} GitHub.Author (AuthorField, authorToAst)
 import GitHub.Connection (Connection (..), connectionToAst)
-import GitHub.GraphQL (NodeName (..), ParamName (..), ParamValue (..), QueryNode (..),
-                       QueryParam (..), State (..), mkQuery, nameNode)
+import GitHub.GraphQL (NodeName (..), ParamName (..), ParamValue (..), PullRequestState (..),
+                       QueryNode (..), QueryParam (..), mkQuery, nameNode)
 import GitHub.Lens (LimitL (..), StatesL (..))
 import GitHub.RequiredField (RequiredField (..))
 
@@ -51,14 +52,14 @@ pullRequestsToAst PullRequests{..} = QueryNode
 -}
 data PullRequestsArgs (fields :: [RequiredField]) = PullRequestsArgs
     { pullRequestsArgsLast   :: !Int
-    , pullRequestsArgsStates :: !(NonEmpty State)
+    , pullRequestsArgsStates :: !(NonEmpty PullRequestState)
     }
 
 instance LimitL PullRequestsArgs where
     lastL = lens pullRequestsArgsLast (\args new -> args { pullRequestsArgsLast = new })
     {-# INLINE lastL #-}
 
-instance StatesL PullRequestsArgs where
+instance StatesL PullRequestsArgs PullRequestState where
     statesL = lens pullRequestsArgsStates (\args new -> args { pullRequestsArgsStates = new })
     {-# INLINE statesL #-}
 
@@ -68,7 +69,7 @@ instance StatesL PullRequestsArgs where
 defPullRequestsArgs :: PullRequestsArgs '[ 'FieldLimit, 'FieldStates ]
 defPullRequestsArgs = PullRequestsArgs
     { pullRequestsArgsLast = -1
-    , pullRequestsArgsStates = Open :| []
+    , pullRequestsArgsStates = PullRequestOpen :| []
     }
 
 pullRequestsArgsToAst :: PullRequestsArgs '[] -> [QueryParam]
@@ -79,7 +80,7 @@ pullRequestsArgsToAst PullRequestsArgs{..} =
         }
     , QueryParam
         { queryParamName = ParamStates
-        , queryParamValue = ParamStatesV pullRequestsArgsStates
+        , queryParamValue = ParamPullRequestStatesV pullRequestsArgsStates
         }
     ]
 

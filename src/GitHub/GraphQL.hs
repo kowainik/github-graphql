@@ -23,22 +23,27 @@ module GitHub.GraphQL
       -- * Mutation
     , Mutation (..)
     , MutationFun (..)
-    , MutationNode (..)
-    , nameMutationNode
 
       -- * Enums
+      -- ** States
+    , State (..)
+    , merged
+    , IssueState (..)
+    , PullRequestState (..)
+      -- ** Other
     , IssueOrderField (..)
     , OrderDirection (..)
-    , State (..)
 
       -- * Utils
     , one
     ) where
 
+import Data.Aeson (FromJSON (..), withText)
+import Data.Foldable (toList)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Text (Text)
 
-import qualified Data.List.NonEmpty as NE
+import qualified Data.Text as Text
 
 ----------------------------------------------------------------------------
 -- Queries
@@ -48,17 +53,19 @@ newtype Query = Query
     { unQuery :: [QueryNode]
     } deriving stock (Show)
 
-{- | Smart constructor for creating 'Query' from 'NonEmpty' list (the
-most common case).
+{- | Smart constructor for creating 'Query' from any 'Foldable'
+container (e.g. list of fields, 'NonEmpty' of smth, etc.)
 -}
-mkQuery :: (n -> QueryNode) -> NonEmpty n -> Query
-mkQuery toNode nodes =
-    Query $ NE.toList $ toNode <$> nodes
+mkQuery :: Foldable f => (n -> QueryNode) -> f n -> Query
+mkQuery toNode = Query . map toNode . toList
 
+{- | Recursive data type with name, parameters and children of the
+same type.
+-}
 data QueryNode = QueryNode
-    { queryNodeName :: !NodeName
-    , queryNodeArgs :: ![QueryParam]
-    , queryNode     :: !Query
+    { queryNodeName :: NodeName
+    , queryNodeArgs :: [QueryParam]
+    , queryNode     :: Query
     } deriving stock (Show)
 
 {- | Create 'QueryNode' with node fields and no subquery. E.g. @title@
@@ -79,25 +86,31 @@ nameNode name = QueryNode
     }
 
 data NodeName
-    = NodeRepository
+    = NodeAssignees
+    | NodeAuthor
+    | NodeBody
+    | NodeCreateIssue
+    | NodeEdges
+    | NodeId
     | NodeIssue
     | NodeIssues
-    | NodePullRequests
-    | NodeViewer
-    | NodeTitle
-    | NodeAuthor
+    | NodeLabels
     | NodeLogin
-    | NodeResourcePath
-    | NodeUrl
+    | NodeName
     | NodeNodes
-    | NodeEdges
-    | NodeCreateIssue
-    | NodeId
+    | NodeNumber
+    | NodePullRequests
+    | NodeRepository
+    | NodeResourcePath
+    | NodeState
+    | NodeTitle
+    | NodeUrl
+    | NodeViewer
     deriving stock (Show)
 
 data QueryParam = QueryParam
-    { queryParamName  :: !ParamName
-    , queryParamValue :: !ParamValue
+    { queryParamName  :: ParamName
+    , queryParamValue :: ParamValue
     } deriving stock (Show)
 
 data ParamName
@@ -121,7 +134,7 @@ data ParamValue
     name: "github-graphql"
     @
     -}
-    = ParamStringV !Text
+    = ParamStringV Text
 
     {- | Integer parameter:
 
@@ -129,15 +142,23 @@ data ParamValue
     last: 2
     @
     -}
-    | ParamIntV !Int
+    | ParamIntV Int
 
-    {- | Issue/PR states:
+    {- | Issue states:
 
     @
-    states: [CLOSED, MERGED]"
+    states: [OPEN, CLOSED]"
     @
     -}
-    | ParamStatesV !(NonEmpty State)
+    | ParamIssueStatesV (NonEmpty IssueState)
+
+    {- | PR states:
+
+    @
+    states: [OPEN, CLOSED, MERGED]"
+    @
+    -}
+    | ParamPullRequestStatesV (NonEmpty PullRequestState)
 
     {- | Issues order field:
 
@@ -145,7 +166,7 @@ data ParamValue
     field: CREATED_AT
     @
     -}
-    | ParamIssueOrderField !IssueOrderField
+    | ParamIssueOrderField IssueOrderField
 
     {- | Direction of order:
 
@@ -153,7 +174,7 @@ data ParamValue
     direction: ASC
     @
     -}
-    | ParamOrderDirection !OrderDirection
+    | ParamOrderDirection OrderDirection
 
     {- | Record parameters:
 
@@ -161,7 +182,7 @@ data ParamValue
     orderBy: {field: CREATED_AT, direction: DESC}
     @
     -}
-    | ParamRecordV !(NonEmpty QueryParam)
+    | ParamRecordV (NonEmpty QueryParam)
     deriving stock (Show)
 
 ----------------------------------------------------------------------------
@@ -173,35 +194,41 @@ newtype Mutation = Mutation
     } deriving stock (Show)
 
 data MutationFun = MutationFun
-    { mutationFunName      :: !NodeName
-    , mutationFunInput     :: !(NonEmpty QueryParam)
-    , mutationFunReturning :: ![MutationNode]
+    { mutationFunName      :: NodeName
+    , mutationFunInput     :: NonEmpty QueryParam
+    , mutationFunReturning :: [QueryNode]
     } deriving stock (Show)
-
--- TODO: maybe think how to unify with QueryNode?
-data MutationNode = MutationNode
-    { mutationNodeName     :: !NodeName
-    , mutationNodeChildren :: ![MutationNode]
-    } deriving stock (Show)
-
-{- | Similar to 'nameNode' but for 'MutationNode'.
--}
-nameMutationNode :: NodeName -> MutationNode
-nameMutationNode name = MutationNode
-    { mutationNodeName = name
-    , mutationNodeChildren = []
-    }
 
 ----------------------------------------------------------------------------
 -- Enums
 ----------------------------------------------------------------------------
 
--- TODO: rename to PullRequestState
-data State
-    = Open
-    | Closed
-    | Merged
-    deriving stock (Show)
+data IssueState
+    = IssueOpen
+    | IssueClosed
+    deriving stock (Show, Eq)
+
+instance FromJSON IssueState where
+    parseJSON = withText "IssueState" $ \case
+        "OPEN"   -> pure IssueOpen
+        "CLOSED" -> pure IssueClosed
+        other    -> fail $ "Expected OPEN or CLOSED but got: " <> Text.unpack other
+
+data PullRequestState
+    = PullRequestOpen
+    | PullRequestClosed
+    | PullRequestMerged
+    deriving stock (Show, Eq)
+
+instance FromJSON PullRequestState where
+    parseJSON = withText "PullRequestState" $ \case
+        "OPEN"   -> pure PullRequestOpen
+        "CLOSED" -> pure PullRequestClosed
+        "MERGED" -> pure PullRequestMerged
+        other    -> fail $ "Expected OPEN or CLOSED or MERGED but got: " <> Text.unpack other
+
+merged :: PullRequestState
+merged = PullRequestMerged
 
 data IssueOrderField
     = Comments
@@ -213,6 +240,22 @@ data OrderDirection
     = Asc
     | Desc
     deriving stock (Show)
+
+----------------------------------------------------------------------------
+-- Interfaces
+----------------------------------------------------------------------------
+
+class State s where
+    open   :: s
+    closed :: s
+
+instance State IssueState where
+    open   = IssueOpen
+    closed = IssueClosed
+
+instance State PullRequestState where
+    open   = PullRequestOpen
+    closed = PullRequestClosed
 
 ----------------------------------------------------------------------------
 -- Utils

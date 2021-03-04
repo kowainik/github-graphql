@@ -1,4 +1,5 @@
-{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 {- |
 Copyright: (c) 2021 Kowainik
@@ -37,19 +38,21 @@ module GitHub.Issues
     ) where
 
 import Data.List.NonEmpty (NonEmpty (..))
+import Data.Maybe (maybeToList)
 import Data.Text (Text)
 import Prolens (Lens', lens)
 
-import {-# SOURCE #-} GitHub.Author (AuthorField, authorToAst, authorToMutationNode)
+import {-# SOURCE #-} GitHub.Author (AuthorField, authorToAst)
 import GitHub.Connection (Connection (..), connectionToAst)
-import GitHub.GraphQL (IssueOrderField (..), Mutation (..), MutationFun (..), MutationNode (..),
+import GitHub.GraphQL (IssueOrderField (..), IssueState (..), Mutation (..), MutationFun (..),
                        NodeName (..), OrderDirection (..), ParamName (..), ParamValue (..),
-                       QueryNode (..), QueryParam (..), State (..), mkQuery, nameMutationNode,
-                       nameNode)
+                       QueryNode (..), QueryParam (..), mkQuery, nameNode)
 import GitHub.Id (Id (..), MilestoneId, RepositoryId)
+import GitHub.Label (Labels, labelsToAst)
 import GitHub.Lens (DirectionL (..), FieldL (..), LimitL (..), RepositoryIdL (..), StatesL (..),
                     TitleL (..))
 import GitHub.RequiredField (RequiredField (..))
+import GitHub.User (Assignees, assigneesToAst)
 
 
 {- | The @issues@ connection of the 'Repository' object.
@@ -57,8 +60,8 @@ import GitHub.RequiredField (RequiredField (..))
 * https://developer.github.com/v4/object/repository/#connections
 -}
 data Issues = Issues
-    { issuesArgs        :: !(IssuesArgs '[])
-    , issuesConnections :: !(NonEmpty (Connection IssueField))
+    { issuesArgs        :: IssuesArgs '[]
+    , issuesConnections :: NonEmpty (Connection IssueField)
     }
 
 issuesToAst :: Issues -> QueryNode
@@ -71,16 +74,16 @@ issuesToAst Issues{..} = QueryNode
 {- | Arguments for the 'Issues' connection.
 -}
 data IssuesArgs (fields :: [RequiredField]) = IssuesArgs
-    { issuesArgsLast    :: !Int
-    , issuesArgsStates  :: !(NonEmpty State)
-    , issuesArgsOrderBy :: !(Maybe (IssueOrder '[]))
+    { issuesArgsLast    :: Int
+    , issuesArgsStates  :: NonEmpty IssueState
+    , issuesArgsOrderBy :: Maybe (IssueOrder '[])
     }
 
 instance LimitL IssuesArgs where
     lastL = lens issuesArgsLast (\args new -> args { issuesArgsLast = new })
     {-# INLINE lastL #-}
 
-instance StatesL IssuesArgs where
+instance StatesL IssuesArgs IssueState where
     statesL = lens issuesArgsStates (\args new -> args { issuesArgsStates = new })
     {-# INLINE statesL #-}
 
@@ -93,7 +96,7 @@ issueOrderL = lens issuesArgsOrderBy (\args new -> args { issuesArgsOrderBy = ne
 defIssuesArgs :: IssuesArgs '[ 'FieldLimit, 'FieldStates ]
 defIssuesArgs = IssuesArgs
     { issuesArgsLast    = -1
-    , issuesArgsStates  = Open :| []
+    , issuesArgsStates  = IssueOpen :| []
     , issuesArgsOrderBy = Nothing
     }
 
@@ -105,7 +108,7 @@ issuesArgsToAst IssuesArgs{..} =
         }
     , QueryParam
         { queryParamName = ParamStates
-        , queryParamValue = ParamStatesV issuesArgsStates
+        , queryParamValue = ParamIssueStatesV issuesArgsStates
         }
     ]
     ++ maybe [] (\io -> [issueOrderToAst io]) issuesArgsOrderBy
@@ -157,18 +160,25 @@ issueOrderToAst IssueOrder{..} = QueryParam
 * https://developer.github.com/v4/object/issue/
 -}
 data IssueField
-    = IssueTitle
+    = IssueAssignees Assignees
     | IssueAuthor (NonEmpty AuthorField)
+    | IssueBody
+    | IssueLabels Labels
+    | IssueNumber
+    | IssueState
+    | IssueTitle
+    | IssueUrl
 
 issueFieldToAst :: IssueField -> QueryNode
 issueFieldToAst = \case
-    IssueTitle               -> nameNode NodeTitle
     IssueAuthor authorFields -> authorToAst authorFields
-
-issueFieldToMutationNode :: IssueField -> MutationNode
-issueFieldToMutationNode = \case
-    IssueTitle               -> nameMutationNode NodeTitle
-    IssueAuthor authorFields -> authorToMutationNode authorFields
+    IssueAssignees assignees -> assigneesToAst assignees
+    IssueBody                -> nameNode NodeBody
+    IssueLabels labels       -> labelsToAst labels
+    IssueNumber              -> nameNode NodeNumber
+    IssueState               -> nameNode NodeState
+    IssueTitle               -> nameNode NodeTitle
+    IssueUrl                 -> nameNode NodeUrl
 
 {- | Data type for creating issue.
 
@@ -185,9 +195,10 @@ createIssueToAst CreateIssue{..} = Mutation
         { mutationFunName = NodeCreateIssue
         , mutationFunInput = createIssueInputToAst createIssueInput
         , mutationFunReturning =
-            [ MutationNode
-                { mutationNodeName = NodeIssue
-                , mutationNodeChildren = map issueFieldToMutationNode createIssueFields
+            [ QueryNode
+                { queryNodeName = NodeIssue
+                , queryNodeArgs = []
+                , queryNode     = mkQuery issueFieldToAst createIssueFields
                 }
             ]
         }
@@ -238,13 +249,10 @@ createIssueInputToAst CreateIssueInput{..} =
         , queryParamValue = ParamStringV createIssueInputTitle
         }
     ]
-    ++ maybe
-        []
-        (\(Id milestoneId) ->
-            [ QueryParam
-                { queryParamName = ParamMilestoneId
-                , queryParamValue = ParamStringV milestoneId
-                }
-            ]
+    ++ map
+        (\(Id milestoneId) -> QueryParam
+            { queryParamName = ParamMilestoneId
+            , queryParamValue = ParamStringV milestoneId
+            }
         )
-        createIssueInputMilestoneId
+        (maybeToList createIssueInputMilestoneId)

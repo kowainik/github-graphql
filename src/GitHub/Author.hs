@@ -16,13 +16,11 @@ module GitHub.Author
 
       -- * AST functions
     , authorToAst
-    , authorToMutationNode
     ) where
 
-import Data.List.NonEmpty (NonEmpty (..), toList)
+import Data.List.NonEmpty (NonEmpty (..))
 
-import GitHub.GraphQL (MutationNode (..), NodeName (..), QueryNode (..), mkQuery, nameMutationNode,
-                       nameNode)
+import GitHub.GraphQL (NodeName (..), QueryNode (..), mkQuery, nameNode)
 import GitHub.Issues (IssueField (..))
 import GitHub.PullRequests (PullRequestField (..))
 
@@ -44,23 +42,11 @@ authorToAst authorFields = QueryNode
     , queryNode     = mkQuery authorFieldToAst authorFields
     }
 
-authorToMutationNode :: NonEmpty AuthorField -> MutationNode
-authorToMutationNode authorFields = MutationNode
-    { mutationNodeName = NodeAuthor
-    , mutationNodeChildren = map authorFieldToMutationNode $ toList authorFields
-    }
-
 authorFieldToAst :: AuthorField -> QueryNode
 authorFieldToAst = \case
     AuthorLogin        -> nameNode NodeLogin
     AuthorResourcePath -> nameNode NodeResourcePath
     AuthorUrl          -> nameNode NodeUrl
-
-authorFieldToMutationNode :: AuthorField -> MutationNode
-authorFieldToMutationNode = \case
-    AuthorLogin        -> nameMutationNode NodeLogin
-    AuthorResourcePath -> nameMutationNode NodeResourcePath
-    AuthorUrl          -> nameMutationNode NodeUrl
 
 login :: AuthorField
 login = AuthorLogin
