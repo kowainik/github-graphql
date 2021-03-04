@@ -34,7 +34,7 @@ exampleQuery = GH.repository
     $ GH.issues
         ( GH.defIssuesArgs
         & set GH.lastL 3
-        & set GH.statesL (GH.one GH.Open)
+        & set GH.statesL (GH.one GH.open)
         )
         (GH.one $ GH.nodes $
            GH.title :|
@@ -44,7 +44,7 @@ exampleQuery = GH.repository
     [ GH.pullRequests
         ( GH.defPullRequestsArgs
         & set GH.lastL 3
-        & set GH.statesL (GH.one GH.Open)
+        & set GH.statesL (GH.one GH.merged)
         )
         (GH.one $ GH.nodes $
            GH.title :|
@@ -65,7 +65,7 @@ queryRendered = T.unlines
     , "        }"
     , "      }"
     , "    }"
-    , "    pullRequests(last: 3, states: [OPEN]) {"
+    , "    pullRequests(last: 3, states: [MERGED]) {"
     , "      nodes {"
     , "        title"
     , "        author {"

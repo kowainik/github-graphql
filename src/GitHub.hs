@@ -20,6 +20,12 @@ module GitHub
       -- ** PullRequests
     , module GitHub.PullRequests
 
+      -- ** Issue or PR labels
+    , module GitHub.Label
+
+      -- ** GitHub users
+    , module GitHub.User
+
       -- * Connection
     , module GitHub.Connection
 
@@ -41,11 +47,13 @@ module GitHub
 
 import GitHub.Author
 import GitHub.Connection
-import GitHub.GraphQL (IssueOrderField (..), OrderDirection (..), State (..), one)
+import GitHub.GraphQL
 import GitHub.Id
 import GitHub.Issues
+import GitHub.Label
 import GitHub.Lens
 import GitHub.PullRequests
 import GitHub.Query
 import GitHub.Repository
 import GitHub.Title
+import GitHub.User
