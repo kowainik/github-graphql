@@ -29,6 +29,7 @@ fields. Examples are:
 data Connection fld
     = Nodes !(NonEmpty fld)
     | Edges
+    | TotalCount
 
 connectionToAst :: (fld -> QueryNode) -> Connection fld -> QueryNode
 connectionToAst fldToAst = \case
@@ -38,6 +39,7 @@ connectionToAst fldToAst = \case
         , queryNode = mkQuery fldToAst fields
         }
     Edges -> nameNode NodeEdges
+    TotalCount -> nameNode NodeTotalCount
 
 {- | Smart constructor for the 'Nodes' 'Connection'.
 -}

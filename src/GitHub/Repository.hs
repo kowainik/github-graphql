@@ -23,6 +23,7 @@ module GitHub.Repository
     , repository
     , issues
     , pullRequests
+    , milestones
 
       -- * AST functions
     , repositoryToAst
@@ -39,6 +40,7 @@ import GitHub.GraphQL (NodeName (..), ParamName (..), ParamValue (..), Query (..
                        QueryParam (..), mkQuery, nameNode)
 import GitHub.Issues (IssueField, Issues (..), IssuesArgs, issuesToAst)
 import GitHub.Lens (NameL (..), OwnerL (..))
+import GitHub.Milestone (MilestoneField, Milestones (..), MilestonesArgs (..), milestonesToAst)
 import GitHub.PullRequests (PullRequestField, PullRequests (..), PullRequestsArgs,
                             pullRequestsToAst)
 import GitHub.RequiredField (DisplayFields, RequiredField (..))
@@ -52,8 +54,8 @@ data Repository where
     Repository
         :: forall fields
         .  CheckFieldsRepositoryArgs fields
-        => { repositoryArgs   :: !(RepositoryArgs fields)
-           , repositoryFields :: !(NonEmpty RepositoryField)
+        => { repositoryArgs   :: RepositoryArgs fields
+           , repositoryFields :: NonEmpty RepositoryField
            }
         -> Repository
 
@@ -69,8 +71,8 @@ repositoryToAst Repository{..} = Query
 {- | Arguments for the 'Repository' connection.
 -}
 data RepositoryArgs (fields :: [RequiredField]) = RepositoryArgs
-    { repositoryArgsOwner :: !Text
-    , repositoryArgsName  :: !Text
+    { repositoryArgsOwner :: Text
+    , repositoryArgsName  :: Text
     }
 
 instance OwnerL RepositoryArgs where
@@ -107,15 +109,17 @@ repositoryArgsToAst RepositoryArgs{..} =
 * https://developer.github.com/v4/object/repository/
 -}
 data RepositoryField
-    = RepositoryIssues Issues
+    = RepositoryId
+    | RepositoryIssues Issues
+    | RepositoryMilestones Milestones
     | RepositoryPullRequests PullRequests
-    | RepositoryId
 
 repositoryFieldToAst :: RepositoryField -> QueryNode
 repositoryFieldToAst = \case
-    RepositoryIssues issuesField             -> issuesToAst issuesField
-    RepositoryPullRequests pullRequestsField -> pullRequestsToAst pullRequestsField
     RepositoryId                             -> nameNode NodeId
+    RepositoryIssues issuesField             -> issuesToAst issuesField
+    RepositoryMilestones milestonesField     -> milestonesToAst milestonesField
+    RepositoryPullRequests pullRequestsField -> pullRequestsToAst pullRequestsField
 
 {- | Smart constructor for the 'Repository' type.
 -}
@@ -126,12 +130,14 @@ repository
     -> Repository
 repository repositoryArgs repositoryFields = Repository{..}
 
-{- | Smart constructor for the 'Issue' field of the 'RepositoryField'.
+{- | Smart constructor for the 'RepositoryIssues' field of the
+'RepositoryField'.
 -}
 issues :: IssuesArgs '[] -> NonEmpty (Connection IssueField) -> RepositoryField
 issues issuesArgs issuesConnections = RepositoryIssues Issues{..}
 
-{- | Smart constructor for the 'PullRequest' field of the 'RepositoryField'.
+{- | Smart constructor for the 'RepositoryPullRequests' field of the
+'RepositoryField'.
 -}
 pullRequests
     :: PullRequestsArgs '[]
@@ -139,6 +145,16 @@ pullRequests
     -> RepositoryField
 pullRequests pullRequestsArgs pullRequestsConnections =
     RepositoryPullRequests PullRequests{..}
+
+{- | Smart constructor for the 'RepositoryMilestones' field of the
+'RepositoryField'.
+-}
+milestones
+    :: MilestonesArgs '[]
+    -> NonEmpty (Connection MilestoneField)
+    -> RepositoryField
+milestones milestonesArgs milestonesConnections =
+    RepositoryMilestones Milestones{..}
 
 type family CheckFieldsRepositoryArgs (fields :: [RequiredField]) :: Constraint where
     CheckFieldsRepositoryArgs '[]  = (() :: Constraint)

@@ -96,14 +96,18 @@ data NodeName
     | NodeIssues
     | NodeLabels
     | NodeLogin
+    | NodeMilestone
+    | NodeMilestones
     | NodeName
     | NodeNodes
     | NodeNumber
+    | NodeProgressPercentage
     | NodePullRequests
     | NodeRepository
     | NodeResourcePath
     | NodeState
     | NodeTitle
+    | NodeTotalCount
     | NodeUrl
     | NodeViewer
     deriving stock (Show)
@@ -235,6 +239,9 @@ data IssueOrderField
     | CreatedAt
     | UpdatedAt
     deriving stock (Show)
+
+-- TODO: create MilestoneOrderField
+-- https://docs.github.com/en/graphql/reference/enums#milestoneorderfield
 
 data OrderDirection
     = Asc

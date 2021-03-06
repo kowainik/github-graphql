@@ -15,16 +15,11 @@ module GitHub.Issues
       Issues (..)
     , IssuesArgs (..)
     , defIssuesArgs
-    , issueOrderL
-
-    , IssueOrder (..)
-    , defIssueOrder
 
     , IssueField (..)
 
       -- ** AST functions
     , issuesToAst
-    , issueOrderToAst
 
       -- * Mutation
       -- ** Data types
@@ -44,13 +39,14 @@ import Prolens (Lens', lens)
 
 import {-# SOURCE #-} GitHub.Author (AuthorField, authorToAst)
 import GitHub.Connection (Connection (..), connectionToAst)
-import GitHub.GraphQL (IssueOrderField (..), IssueState (..), Mutation (..), MutationFun (..),
-                       NodeName (..), OrderDirection (..), ParamName (..), ParamValue (..),
-                       QueryNode (..), QueryParam (..), mkQuery, nameNode)
+import GitHub.GraphQL (IssueState (..), Mutation (..), MutationFun (..), NodeName (..),
+                       ParamName (..), ParamValue (..), QueryNode (..), QueryParam (..), mkQuery,
+                       nameNode)
 import GitHub.Id (Id (..), MilestoneId, RepositoryId)
 import GitHub.Label (Labels, labelsToAst)
-import GitHub.Lens (DirectionL (..), FieldL (..), LimitL (..), RepositoryIdL (..), StatesL (..),
-                    TitleL (..))
+import GitHub.Lens (LimitL (..), OrderL (..), RepositoryIdL (..), StatesL (..), TitleL (..))
+import {-# SOURCE #-} GitHub.Milestone (MilestoneField, milestoneToAst)
+import GitHub.Order (Order, maybeOrderToAst)
 import GitHub.RequiredField (RequiredField (..))
 import GitHub.User (Assignees, assigneesToAst)
 
@@ -76,7 +72,7 @@ issuesToAst Issues{..} = QueryNode
 data IssuesArgs (fields :: [RequiredField]) = IssuesArgs
     { issuesArgsLast    :: Int
     , issuesArgsStates  :: NonEmpty IssueState
-    , issuesArgsOrderBy :: Maybe (IssueOrder '[])
+    , issuesArgsOrderBy :: Maybe (Order '[])
     }
 
 instance LimitL IssuesArgs where
@@ -87,8 +83,9 @@ instance StatesL IssuesArgs IssueState where
     statesL = lens issuesArgsStates (\args new -> args { issuesArgsStates = new })
     {-# INLINE statesL #-}
 
-issueOrderL :: Lens' (IssuesArgs fields) (Maybe (IssueOrder '[]))
-issueOrderL = lens issuesArgsOrderBy (\args new -> args { issuesArgsOrderBy = new })
+instance OrderL IssuesArgs where
+    orderL = lens issuesArgsOrderBy (\args new -> args { issuesArgsOrderBy = new })
+    {-# INLINE orderL #-}
 
 {- | Default value of 'IssuesArgs'. Use methods of 'LimitL' and
 'StatesL' to change its fields.
@@ -111,49 +108,8 @@ issuesArgsToAst IssuesArgs{..} =
         , queryParamValue = ParamIssueStatesV issuesArgsStates
         }
     ]
-    ++ maybe [] (\io -> [issueOrderToAst io]) issuesArgsOrderBy
+    ++ maybeOrderToAst issuesArgsOrderBy
 
-{- | Connection parameter to specify issue order:
-
-https://docs.github.com/en/graphql/reference/input-objects#issueorder
--}
-data IssueOrder (fields :: [RequiredField]) = IssueOrder
-   { issueOrderDirection :: !OrderDirection
-   , issueOrderField     :: !IssueOrderField
-   }
-
-instance DirectionL IssueOrder where
-    directionL = lens issueOrderDirection (\args new -> args { issueOrderDirection = new })
-    {-# INLINE directionL #-}
-
-instance FieldL IssueOrder where
-    fieldL = lens issueOrderField (\args new -> args { issueOrderField = new })
-    {-# INLINE fieldL #-}
-
-{- | Default value of 'IssuesOrder'. Use methods of 'FieldL' and
-'DirectionL' to change its fields.
--}
-defIssueOrder :: IssueOrder '[ 'FieldDirection, 'FieldField ]
-defIssueOrder = IssueOrder
-    { issueOrderDirection = Asc
-    , issueOrderField = CreatedAt
-    }
-
-issueOrderToAst :: IssueOrder '[] -> QueryParam
-issueOrderToAst IssueOrder{..} = QueryParam
-    { queryParamName = ParamOrderBy
-    , queryParamValue = ParamRecordV
-        $ QueryParam
-            { queryParamName = ParamField
-            , queryParamValue = ParamIssueOrderField issueOrderField
-            }
-        :|
-        [ QueryParam
-            { queryParamName = ParamDirection
-            , queryParamValue = ParamOrderDirection issueOrderDirection
-            }
-        ]
-    }
 
 {- | Fields of the @Issue@ object.
 
@@ -164,6 +120,7 @@ data IssueField
     | IssueAuthor (NonEmpty AuthorField)
     | IssueBody
     | IssueLabels Labels
+    | IssueMilestone (NonEmpty MilestoneField)
     | IssueNumber
     | IssueState
     | IssueTitle
@@ -171,14 +128,15 @@ data IssueField
 
 issueFieldToAst :: IssueField -> QueryNode
 issueFieldToAst = \case
-    IssueAuthor authorFields -> authorToAst authorFields
-    IssueAssignees assignees -> assigneesToAst assignees
-    IssueBody                -> nameNode NodeBody
-    IssueLabels labels       -> labelsToAst labels
-    IssueNumber              -> nameNode NodeNumber
-    IssueState               -> nameNode NodeState
-    IssueTitle               -> nameNode NodeTitle
-    IssueUrl                 -> nameNode NodeUrl
+    IssueAuthor authorFields       -> authorToAst authorFields
+    IssueAssignees assignees       -> assigneesToAst assignees
+    IssueBody                      -> nameNode NodeBody
+    IssueLabels labels             -> labelsToAst labels
+    IssueMilestone milestoneFields -> milestoneToAst milestoneFields
+    IssueNumber                    -> nameNode NodeNumber
+    IssueState                     -> nameNode NodeState
+    IssueTitle                     -> nameNode NodeTitle
+    IssueUrl                       -> nameNode NodeUrl
 
 {- | Data type for creating issue.
 
