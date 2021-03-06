@@ -21,7 +21,8 @@ querySpecs token = describe "Query" $ do
     it "queries the 'github-graphql' repository id" $
         GH.queryRepositoryId token "kowainik" "github-graphql"
             `shouldReturn` githubGraphqlRepositoryId
-    it "queries to latest closed issues of 'kowainik/hit-on'" $
+
+    it "queries two latest closed issues of 'kowainik/hit-on'" $
         queryHitonIssues token `shouldReturn` Issues
             [ Issue
                 { issueTitle = "Implement \"git-new\"-like command: `hit hop`"
@@ -42,6 +43,17 @@ querySpecs token = describe "Query" $ do
                 , issueState = GH.IssueClosed
                 , issueLabels = [ "CLI" ]
                 , issueAssignees = [ "vrom911" ]
+                }
+            ]
+
+    it "queries the first milestone from 'kowainik/hit-on'" $
+        queryHitonMilestones token `shouldReturn` Milestones
+            [ Milestone
+                { milestoneId = "MDk6TWlsZXN0b25lNDQ4MDI1Mg=="
+                , milestoneNumber = 1
+                , milestoneTitle = "v0.1.0.0: New fancy and convenient commands"
+                , milestoneProgressPercentage = 100
+                , milestoneTotalIssues = 17
                 }
             ]
 
@@ -73,8 +85,8 @@ issuesQuery = GH.repository
         ( GH.defIssuesArgs
         & set GH.lastL 2
         & set GH.statesL (GH.one GH.closed)
-        & set GH.issueOrderL
-            ( Just $ GH.defIssueOrder
+        & set GH.orderL
+            ( Just $ GH.defOrder
             & set GH.fieldL GH.CreatedAt
             & set GH.directionL GH.Desc
             )
@@ -215,3 +227,112 @@ instance FromJSON Issue where
 
         parseAssignees :: Array -> Parser [Text]
         parseAssignees = mapM (withObject "Assignee" $ \o -> o .: "login") . toList
+
+queryHitonMilestones :: GH.GitHubToken -> IO Milestones
+queryHitonMilestones token = GH.queryGitHub token $ GH.repositoryToAst milestonesQuery
+
+{-
+query {
+  repository(owner: "kowainik", name: "hit-on") {
+    milestones(last: 1, orderBy: {field:CREATED_AT, direction: DESC}) {
+      totalCount
+      nodes {
+        id
+        number
+        title
+        progressPercentage
+        issues(last: 1000, states: [CLOSED, OPEN]) {
+          totalCount
+        }
+      }
+    }
+  }
+}
+-}
+milestonesQuery :: GH.Repository
+milestonesQuery = GH.repository
+    ( GH.defRepositoryArgs
+    & set GH.ownerL "kowainik"
+    & set GH.nameL  "hit-on"
+    )
+    $ GH.one
+    $ GH.milestones
+        ( GH.defMilestonesArgs
+        & set GH.lastL 1
+        & set GH.orderL
+            ( Just $ GH.defOrder
+            & set GH.fieldL GH.CreatedAt
+            & set GH.directionL GH.Desc
+            )
+        )
+        ( GH.one
+        $ GH.nodes
+        $    GH.MilestoneId
+        :| [ GH.MilestoneNumber
+           , GH.MilestoneProgressPercentage
+           , GH.MilestoneTitle
+           , GH.MilestoneIssues $ GH.Issues
+               ( GH.defIssuesArgs
+               & set GH.lastL 1000
+               & set GH.statesL (GH.closed :| [GH.open]) -- universeNonEmpty
+               )
+               (GH.one GH.TotalCount)
+           ]
+        )
+
+newtype Milestones = Milestones
+    { unMilestones :: [Milestone]
+    } deriving stock (Show, Eq)
+
+{- Parsing of the following JSON except the "data" field:
+
+@
+{
+  "data": {
+    "repository": {
+      "milestones": {
+        "nodes": [
+          {
+            "id": "MDk6TWlsZXN0b25lNDQ4MDI1Mg==",
+            "number": 1,
+            "title": "v0.1.0.0: New fancy and convenient commands",
+            "progressPercentage": 100,
+            "issues": {
+              "totalCount": 17
+            }
+          }
+        ]
+      }
+    }
+  }
+}
+@
+-}
+instance FromJSON Milestones where
+    parseJSON = withObject "Milestones" $ \o -> do
+        repository <- o .: "repository"
+        milestones <- repository .: "milestones"
+        nodes <- milestones .: "nodes"
+
+        Milestones <$> mapM parseJSON nodes
+
+data Milestone = Milestone
+    { milestoneId                 :: Text
+    , milestoneNumber             :: Int
+    , milestoneTitle              :: Text
+    , milestoneProgressPercentage :: Double
+    , milestoneTotalIssues        :: Int
+    } deriving stock (Show, Eq)
+
+instance FromJSON Milestone where
+    parseJSON = withObject "Milestone" $ \o -> do
+        milestoneId    <- o .: "id"
+        milestoneNumber <- o .: "number"
+        milestoneTitle  <- o .: "title"
+
+        milestoneProgressPercentage <- o .: "progressPercentage"
+
+        issues <- o .: "issues"
+        milestoneTotalIssues <- issues .: "totalCount"
+
+        pure Milestone{..}

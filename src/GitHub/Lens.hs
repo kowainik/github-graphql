@@ -20,6 +20,7 @@ module GitHub.Lens
     , FieldL (..)
     , LimitL (..)
     , NameL (..)
+    , OrderL (..)
     , OwnerL (..)
     , RepositoryIdL (..)
     , StatesL (..)
@@ -32,10 +33,11 @@ module GitHub.Lens
 import Data.Kind (Type)
 import Data.List.NonEmpty (NonEmpty)
 import Data.Text (Text)
-import Prolens (Lens)
+import Prolens (Lens, Lens')
 
 import GitHub.GraphQL (IssueOrderField, OrderDirection)
 import GitHub.Id (RepositoryId)
+import {-# SOURCE #-} GitHub.Order (Order)
 import GitHub.RequiredField (RequiredField (..))
 
 
@@ -79,6 +81,11 @@ class TitleL (r :: [RequiredField] -> Type) where
 -}
 class RepositoryIdL (r :: [RequiredField] -> Type) where
     repositoryIdL :: Lens (r args) (r (Delete 'FieldRepositoryId args)) RepositoryId RepositoryId
+
+{- | Typeclass for lenses that can change optional 'Order'.
+-}
+class OrderL (r :: [RequiredField] -> Type) where
+    orderL :: Lens' (r args) (Maybe (Order '[]))
 
 -- Internal helpers
 

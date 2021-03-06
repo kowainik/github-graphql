@@ -16,9 +16,13 @@ module GitHub
       -- * Queries connections
       -- ** Issues
     , module GitHub.Issues
+    , module GitHub.Order
 
       -- ** PullRequests
     , module GitHub.PullRequests
+
+      -- ** Milestones
+    , module GitHub.Milestone
 
       -- ** Issue or PR labels
     , module GitHub.Label
@@ -52,6 +56,8 @@ import GitHub.Id
 import GitHub.Issues
 import GitHub.Label
 import GitHub.Lens
+import GitHub.Milestone
+import GitHub.Order
 import GitHub.PullRequests
 import GitHub.Query
 import GitHub.Repository

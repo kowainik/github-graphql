@@ -71,6 +71,8 @@ library
                          GitHub.Issues
                          GitHub.Label
                          GitHub.Lens
+                         GitHub.Milestone
+                         GitHub.Order
                          GitHub.PullRequests
                          GitHub.Render
                          GitHub.Query
