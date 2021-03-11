@@ -9,16 +9,21 @@ Maintainer: Kowainik <xrom.xkov@gmail.com>
 Data types and helper functions to work with @issues@.
 -}
 
-module GitHub.Issues
+module GitHub.Issue
     ( -- * Query
       -- ** Data types
-      Issues (..)
+      Issue (..)
+    , IssueArgs (..)
+    , defIssueArgs
+
+    , Issues (..)
     , IssuesArgs (..)
     , defIssuesArgs
 
     , IssueField (..)
 
       -- ** AST functions
+    , issueToAst
     , issuesToAst
 
       -- * Mutation
@@ -44,13 +49,54 @@ import GitHub.GraphQL (IssueState (..), Mutation (..), MutationFun (..), NodeNam
                        nameNode)
 import GitHub.Id (Id (..), MilestoneId, RepositoryId)
 import GitHub.Label (Labels, labelsToAst)
-import GitHub.Lens (LimitL (..), OrderL (..), RepositoryIdL (..), StatesL (..), TitleL (..))
+import GitHub.Lens (LimitL (..), NumberL (..), OrderL (..), RepositoryIdL (..), StatesL (..),
+                    TitleL (..))
 import {-# SOURCE #-} GitHub.Milestone (MilestoneField, milestoneToAst)
 import GitHub.Order (Order, maybeOrderToAst)
 import GitHub.RequiredField (RequiredField (..))
 import GitHub.User (Assignees, assigneesToAst)
 
+{- | The @issue@ connection of the 'Repository' object.
 
+* https://developer.github.com/v4/object/repository/#connections
+-}
+data Issue = Issue
+    { issueArgs        :: IssueArgs '[]
+    , issueConnections :: NonEmpty (Connection IssueField)
+    }
+
+issueToAst :: Issue -> QueryNode
+issueToAst Issue{..} = QueryNode
+    { queryNodeName = NodeIssue
+    , queryNodeArgs = issueArgsToAst issueArgs
+    , queryNode     = mkQuery (connectionToAst issueFieldToAst) issueConnections
+    }
+
+{- | Arguments for the 'Issues' connection.
+-}
+data IssueArgs (fields :: [RequiredField]) = IssueArgs
+    { issueArgsNumber :: Int
+    }
+
+instance NumberL IssueArgs where
+    numberL = lens issueArgsNumber (\args new -> args { issueArgsNumber = new })
+    {-# INLINE numberL #-}
+
+{- | Default value of 'IssueArgs'. Use methods of 'NumberL' to change
+its fields.
+-}
+defIssueArgs :: IssueArgs '[ 'FieldNumber ]
+defIssueArgs = IssueArgs
+    { issueArgsNumber = -1
+    }
+
+issueArgsToAst :: IssueArgs '[] -> [QueryParam]
+issueArgsToAst IssueArgs{..} =
+    [ QueryParam
+        { queryParamName = ParamNumber
+        , queryParamValue = ParamIntV issueArgsNumber
+        }
+    ]
 {- | The @issues@ connection of the 'Repository' object.
 
 * https://developer.github.com/v4/object/repository/#connections
@@ -119,6 +165,7 @@ data IssueField
     = IssueAssignees Assignees
     | IssueAuthor (NonEmpty AuthorField)
     | IssueBody
+    | IssueId
     | IssueLabels Labels
     | IssueMilestone (NonEmpty MilestoneField)
     | IssueNumber
@@ -131,6 +178,7 @@ issueFieldToAst = \case
     IssueAuthor authorFields       -> authorToAst authorFields
     IssueAssignees assignees       -> assigneesToAst assignees
     IssueBody                      -> nameNode NodeBody
+    IssueId                        -> nameNode NodeId
     IssueLabels labels             -> labelsToAst labels
     IssueMilestone milestoneFields -> milestoneToAst milestoneFields
     IssueNumber                    -> nameNode NodeNumber

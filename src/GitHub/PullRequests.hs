@@ -14,6 +14,7 @@ module GitHub.PullRequests
       PullRequests (..)
     , PullRequestsArgs (..)
     , defPullRequestsArgs
+    , headRefNameL
 
     , PullRequestField (..)
 
@@ -22,7 +23,9 @@ module GitHub.PullRequests
     ) where
 
 import Data.List.NonEmpty (NonEmpty (..))
-import Prolens (lens)
+import Data.Maybe (maybeToList)
+import Data.Text (Text)
+import Prolens (Lens', lens)
 
 import {-# SOURCE #-} GitHub.Author (AuthorField, authorToAst)
 import GitHub.Connection (Connection (..), connectionToAst)
@@ -37,8 +40,8 @@ import GitHub.RequiredField (RequiredField (..))
 * https://developer.github.com/v4/object/repository/#connections
 -}
 data PullRequests = PullRequests
-    { pullRequestsArgs        :: !(PullRequestsArgs '[])
-    , pullRequestsConnections :: !(NonEmpty (Connection PullRequestField))
+    { pullRequestsArgs        :: PullRequestsArgs '[]
+    , pullRequestsConnections :: NonEmpty (Connection PullRequestField)
     }
 
 pullRequestsToAst :: PullRequests -> QueryNode
@@ -51,8 +54,9 @@ pullRequestsToAst PullRequests{..} = QueryNode
 {- | Arguments for the 'PullRequest' connection.
 -}
 data PullRequestsArgs (fields :: [RequiredField]) = PullRequestsArgs
-    { pullRequestsArgsLast   :: !Int
-    , pullRequestsArgsStates :: !(NonEmpty PullRequestState)
+    { pullRequestsArgsLast        :: Int
+    , pullRequestsArgsStates      :: NonEmpty PullRequestState
+    , pullRequestsArgsHeadRefName :: Maybe Text
     }
 
 instance LimitL PullRequestsArgs where
@@ -63,6 +67,9 @@ instance StatesL PullRequestsArgs PullRequestState where
     statesL = lens pullRequestsArgsStates (\args new -> args { pullRequestsArgsStates = new })
     {-# INLINE statesL #-}
 
+headRefNameL :: Lens' (PullRequestsArgs fields) (Maybe Text)
+headRefNameL = lens pullRequestsArgsHeadRefName (\args new -> args { pullRequestsArgsHeadRefName = new })
+
 {- | Default value of 'PullRequestsArgs'. Use methods of 'HasLimit' and
 'HasStates' to change its fields.
 -}
@@ -70,6 +77,7 @@ defPullRequestsArgs :: PullRequestsArgs '[ 'FieldLimit, 'FieldStates ]
 defPullRequestsArgs = PullRequestsArgs
     { pullRequestsArgsLast = -1
     , pullRequestsArgsStates = PullRequestOpen :| []
+    , pullRequestsArgsHeadRefName = Nothing
     }
 
 pullRequestsArgsToAst :: PullRequestsArgs '[] -> [QueryParam]
@@ -83,6 +91,13 @@ pullRequestsArgsToAst PullRequestsArgs{..} =
         , queryParamValue = ParamPullRequestStatesV pullRequestsArgsStates
         }
     ]
+    ++ map
+         (\headRefName -> QueryParam
+             { queryParamName = ParamHeadRefName
+             , queryParamValue = ParamStringV headRefName
+             }
+         )
+         (maybeToList pullRequestsArgsHeadRefName)
 
 {- | Fields of the @PullRequest@ object.
 

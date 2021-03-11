@@ -15,8 +15,10 @@ module GitHub.Id
     ( -- * Main ID type
       Id (..)
     , IdType (..)
+    , castId
 
       -- * Different IDs
+    , AnyId
     , MilestoneId
     , RepositoryId
     ) where
@@ -37,8 +39,16 @@ instance FromJSON (Id idType) where
     parseJSON = withObject "Id" $ \o -> Id <$> (o .: "id")
 
 data IdType
-    = IDRepository
+    = IDAny
+    | IDRepository
     | IDMilestone
 
+type AnyId = Id 'IDAny
 type RepositoryId = Id 'IDRepository
 type MilestoneId = Id 'IDMilestone
+
+castId
+    :: forall (to :: IdType) (from :: IdType)
+    .  Id from
+    -> Id to
+castId (Id i) = Id i

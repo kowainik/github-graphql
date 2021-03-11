@@ -40,6 +40,7 @@ data RequiredField
     | FieldDirection  -- ^ direction
     | FieldField  -- ^ field
     | FieldRepositoryId  -- ^ repositoryId
+    | FieldNumber  -- ^ number
 
 {- Display all requires fields with their lens hints.
 -}
@@ -75,3 +76,6 @@ type family FieldNameAndLens (field :: RequiredField) :: ErrorMessage where
     FieldNameAndLens 'FieldRepositoryId =
         "    * repositoryId"
       % "        Lens: repositoryIdL from GitHub.Lens.RepositoryIdL"
+    FieldNameAndLens 'FieldNumber =
+        "    * number"
+      % "        Lens: numberL from GitHub.Lens.NumberL"

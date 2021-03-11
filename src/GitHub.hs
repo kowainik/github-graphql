@@ -15,7 +15,7 @@ module GitHub
 
       -- * Queries connections
       -- ** Issues
-    , module GitHub.Issues
+    , module GitHub.Issue
     , module GitHub.Order
 
       -- ** PullRequests
@@ -53,7 +53,7 @@ import GitHub.Author
 import GitHub.Connection
 import GitHub.GraphQL
 import GitHub.Id
-import GitHub.Issues
+import GitHub.Issue
 import GitHub.Label
 import GitHub.Lens
 import GitHub.Milestone

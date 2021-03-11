@@ -52,6 +52,7 @@ import qualified Data.Text as Text
 newtype Query = Query
     { unQuery :: [QueryNode]
     } deriving stock (Show)
+      deriving newtype (Semigroup, Monoid)
 
 {- | Smart constructor for creating 'Query' from any 'Foldable'
 container (e.g. list of fields, 'NonEmpty' of smth, etc.)
@@ -86,9 +87,11 @@ nameNode name = QueryNode
     }
 
 data NodeName
-    = NodeAssignees
+    = NodeAddAssigneesToAssignable
+    | NodeAssignees
     | NodeAuthor
     | NodeBody
+    | NodeClientMutationId
     | NodeCreateIssue
     | NodeEdges
     | NodeId
@@ -118,17 +121,21 @@ data QueryParam = QueryParam
     } deriving stock (Show)
 
 data ParamName
-    = ParamOwner
-    | ParamName
-    | ParamTitle
-    | ParamLast
-    | ParamStates
-    | ParamOrderBy
-    | ParamField
+    = ParamAssignableId
+    | ParamAssigneeIds
     | ParamDirection
+    | ParamField
+    | ParamHeadRefName
     | ParamInput
-    | ParamRepositoryId
+    | ParamLast
     | ParamMilestoneId
+    | ParamName
+    | ParamNumber
+    | ParamOrderBy
+    | ParamOwner
+    | ParamRepositoryId
+    | ParamStates
+    | ParamTitle
     deriving stock (Show)
 
 data ParamValue
@@ -187,6 +194,15 @@ data ParamValue
     @
     -}
     | ParamRecordV (NonEmpty QueryParam)
+
+    {- | List parameters:
+
+    @
+    assignees: ["foo", "bar"]
+    @
+    -}
+    -- TODO: use GADT to allow only single type
+    | ParamArrayV [ParamValue]
     deriving stock (Show)
 
 ----------------------------------------------------------------------------

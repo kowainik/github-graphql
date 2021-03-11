@@ -43,10 +43,12 @@ import GitHub.Render (renderTopMutation, renderTopQuery)
 
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
+import qualified Data.Text.IO as TextIO
 
 import qualified GitHub.Lens as GH
 import qualified GitHub.Repository as GH
 
+import qualified Data.ByteString.Lazy as LBS
 
 {- | GitHub OAuth token.
 -}
@@ -145,6 +147,9 @@ callGitHubRaw
 callGitHubRaw (GitHubToken token) text = do
     manager <- newTlsManager
 
+    TextIO.putStrLn ">>> Query"
+    TextIO.putStrLn text
+
     initialRequest <- parseRequest "https://api.github.com/graphql"
     let queryBody = object ["query" .= text]
 
@@ -159,6 +164,9 @@ callGitHubRaw (GitHubToken token) text = do
 
     -- calling the API
     response <- httpLbs request manager
+
+    TextIO.putStrLn ">>> Response"
+    LBS.putStrLn $ responseBody response
 
     case statusCode $ responseStatus response of
         200 -> case eitherDecode @(GitHubDataResponse a) (responseBody response) of
