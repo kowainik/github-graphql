@@ -45,6 +45,7 @@ exampleQuery = GH.repository
         ( GH.defPullRequestsArgs
         & set GH.lastL 3
         & set GH.statesL (GH.one GH.merged)
+        & set GH.headRefNameL (Just "patch-1")
         )
         (GH.one $ GH.nodes $
            GH.title :|
@@ -65,7 +66,7 @@ queryRendered = T.unlines
     , "        }"
     , "      }"
     , "    }"
-    , "    pullRequests(last: 3, states: [MERGED]) {"
+    , "    pullRequests(last: 3, states: [MERGED], headRefName: \"patch-1\") {"
     , "      nodes {"
     , "        title"
     , "        author {"

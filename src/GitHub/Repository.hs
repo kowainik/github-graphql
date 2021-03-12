@@ -21,6 +21,7 @@ module GitHub.Repository
 
       -- * Smart constructors
     , repository
+    , issue
     , issues
     , pullRequests
     , milestones
@@ -38,7 +39,8 @@ import Type.Errors.Pretty (TypeError, type (%))
 import GitHub.Connection (Connection (..))
 import GitHub.GraphQL (NodeName (..), ParamName (..), ParamValue (..), Query (..), QueryNode (..),
                        QueryParam (..), mkQuery, nameNode)
-import GitHub.Issues (IssueField, Issues (..), IssuesArgs, issuesToAst)
+import GitHub.Issue (Issue (..), IssueArgs (..), IssueField, Issues (..), IssuesArgs, issueToAst,
+                     issuesToAst)
 import GitHub.Lens (NameL (..), OwnerL (..))
 import GitHub.Milestone (MilestoneField, Milestones (..), MilestonesArgs (..), milestonesToAst)
 import GitHub.PullRequests (PullRequestField, PullRequests (..), PullRequestsArgs,
@@ -110,6 +112,7 @@ repositoryArgsToAst RepositoryArgs{..} =
 -}
 data RepositoryField
     = RepositoryId
+    | RepositoryIssue Issue
     | RepositoryIssues Issues
     | RepositoryMilestones Milestones
     | RepositoryPullRequests PullRequests
@@ -117,6 +120,7 @@ data RepositoryField
 repositoryFieldToAst :: RepositoryField -> QueryNode
 repositoryFieldToAst = \case
     RepositoryId                             -> nameNode NodeId
+    RepositoryIssue issueField               -> issueToAst issueField
     RepositoryIssues issuesField             -> issuesToAst issuesField
     RepositoryMilestones milestonesField     -> milestonesToAst milestonesField
     RepositoryPullRequests pullRequestsField -> pullRequestsToAst pullRequestsField
@@ -129,6 +133,12 @@ repository
     -> NonEmpty RepositoryField
     -> Repository
 repository repositoryArgs repositoryFields = Repository{..}
+
+{- | Smart constructor for the 'RepositoryIssues' field of the
+'RepositoryField'.
+-}
+issue :: IssueArgs '[] -> NonEmpty (Connection IssueField) -> RepositoryField
+issue issueArgs issueConnections = RepositoryIssue Issue{..}
 
 {- | Smart constructor for the 'RepositoryIssues' field of the
 'RepositoryField'.

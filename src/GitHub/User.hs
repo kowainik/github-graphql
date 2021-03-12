@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE GADTs     #-}
 
 {- |
 Copyright: (c) 2020 Kowainik
@@ -9,21 +10,32 @@ GitHub User type.
 -}
 
 module GitHub.User
-    ( Assignees (..)
+    ( -- * Query
+      Assignees (..)
     , AssigneesArgs (..)
     , defAssigneesArgs
 
+    , Viewer (..)
+    , viewerToAst
+
     , UserField (..)
 
-      -- * Internal
+      -- ** Internal
     , assigneesToAst
+
+      -- * Mutation
+    , AddAssigneesToAssignable (..)
+    , addAssigneesToAssignableToAst
     ) where
 
+import Data.List.NonEmpty (NonEmpty (..))
 import Prolens (lens)
 
 import GitHub.Connection (Connection, connectionToAst)
-import GitHub.GraphQL (NodeName (..), ParamName (..), ParamValue (..), Query (..), QueryNode (..),
-                       QueryParam (..), nameNode)
+import GitHub.GraphQL (Mutation (..), MutationFun (..), NodeName (..), ParamName (..),
+                       ParamValue (..), Query (..), QueryNode (..), QueryParam (..), mkQuery,
+                       nameNode)
+import GitHub.Id (Id (..))
 import GitHub.Lens (LimitL (..))
 import GitHub.RequiredField (RequiredField (..))
 
@@ -68,9 +80,49 @@ assigneesArgsToAst AssigneesArgs{..} =
         }
     ]
 
+newtype Viewer = Viewer
+    { viewerFields :: NonEmpty UserField
+    }
+
+viewerToAst :: Viewer -> Query
+viewerToAst = mkQuery userFieldToAst . viewerFields
+
 data UserField
-    = UserLogin
+    = UserId
+    | UserLogin
 
 userFieldToAst :: UserField -> QueryNode
 userFieldToAst = \case
+    UserId    -> nameNode NodeId
     UserLogin -> nameNode NodeLogin
+
+{- Mutation to add assigneess.
+
+* https://docs.github.com/en/graphql/reference/mutations#addassigneestoassignable
+-}
+data AddAssigneesToAssignable where
+    AddAssigneesToAssignable
+        :: forall to who
+        .  { assignTo :: Id to
+           , assignees :: [Id who]
+           }
+        -> AddAssigneesToAssignable
+
+addAssigneesToAssignableToAst :: AddAssigneesToAssignable -> Mutation
+addAssigneesToAssignableToAst AddAssigneesToAssignable{..} = Mutation
+    [ MutationFun
+        { mutationFunName = NodeAddAssigneesToAssignable
+        , mutationFunInput =
+            QueryParam
+                { queryParamName = ParamAssignableId
+                , queryParamValue = ParamStringV (unId assignTo)
+                }
+            :|
+            [ QueryParam
+                { queryParamName = ParamAssigneeIds
+                , queryParamValue = ParamArrayV (map (ParamStringV . unId) assignees)
+                }
+            ]
+        , mutationFunReturning = [ nameNode NodeClientMutationId ]
+        }
+    ]

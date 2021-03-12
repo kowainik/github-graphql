@@ -68,7 +68,7 @@ library
                          GitHub.Connection
                          GitHub.GraphQL
                          GitHub.Id
-                         GitHub.Issues
+                         GitHub.Issue
                          GitHub.Label
                          GitHub.Lens
                          GitHub.Milestone

@@ -21,7 +21,7 @@ module GitHub.Author
 import Data.List.NonEmpty (NonEmpty (..))
 
 import GitHub.GraphQL (NodeName (..), QueryNode (..), mkQuery, nameNode)
-import GitHub.Issues (IssueField (..))
+import GitHub.Issue (IssueField (..))
 import GitHub.PullRequests (PullRequestField (..))
 
 

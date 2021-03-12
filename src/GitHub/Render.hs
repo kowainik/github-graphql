@@ -47,30 +47,32 @@ renderQueryNode i QueryNode{..} =
 
 renderNodeName :: NodeName -> Text
 renderNodeName = \case
-    NodeAssignees          -> "assignees"
-    NodeAuthor             -> "author"
-    NodeBody               -> "body"
-    NodeCreateIssue        -> "createIssue"
-    NodeEdges              -> "edges"
-    NodeId                 -> "id"
-    NodeIssue              -> "issue"
-    NodeIssues             -> "issues"
-    NodeLabels             -> "labels"
-    NodeLogin              -> "login"
-    NodeMilestone          -> "milestone"
-    NodeMilestones         -> "milestones"
-    NodeName               -> "name"
-    NodeNodes              -> "nodes"
-    NodeNumber             -> "number"
-    NodeProgressPercentage -> "progressPercentage"
-    NodePullRequests       -> "pullRequests"
-    NodeRepository         -> "repository"
-    NodeResourcePath       -> "resourcePath"
-    NodeState              -> "state"
-    NodeTitle              -> "title"
-    NodeTotalCount         -> "totalCount"
-    NodeUrl                -> "url"
-    NodeViewer             -> "viewer"
+    NodeAddAssigneesToAssignable -> "addAssigneesToAssignable"
+    NodeAssignees                -> "assignees"
+    NodeAuthor                   -> "author"
+    NodeBody                     -> "body"
+    NodeClientMutationId         -> "clientMutationId"
+    NodeCreateIssue              -> "createIssue"
+    NodeEdges                    -> "edges"
+    NodeId                       -> "id"
+    NodeIssue                    -> "issue"
+    NodeIssues                   -> "issues"
+    NodeLabels                   -> "labels"
+    NodeLogin                    -> "login"
+    NodeMilestone                -> "milestone"
+    NodeMilestones               -> "milestones"
+    NodeName                     -> "name"
+    NodeNodes                    -> "nodes"
+    NodeNumber                   -> "number"
+    NodeProgressPercentage       -> "progressPercentage"
+    NodePullRequests             -> "pullRequests"
+    NodeRepository               -> "repository"
+    NodeResourcePath             -> "resourcePath"
+    NodeState                    -> "state"
+    NodeTitle                    -> "title"
+    NodeTotalCount               -> "totalCount"
+    NodeUrl                      -> "url"
+    NodeViewer                   -> "viewer"
 
 renderQueryParam :: QueryParam -> Text
 renderQueryParam QueryParam{..} =
@@ -80,17 +82,21 @@ renderQueryParam QueryParam{..} =
 
 renderParamName :: ParamName -> Text
 renderParamName = \case
-    ParamOwner        -> "owner"
-    ParamName         -> "name"
-    ParamTitle        -> "title"
-    ParamLast         -> "last"
-    ParamStates       -> "states"
-    ParamOrderBy      -> "orderBy"
-    ParamField        -> "field"
+    ParamAssignableId -> "assignableId"
+    ParamAssigneeIds  -> "assigneeIds"
     ParamDirection    -> "direction"
+    ParamField        -> "field"
+    ParamHeadRefName  -> "headRefName"
     ParamInput        -> "input"
-    ParamRepositoryId -> "repositoryId"
+    ParamLast         -> "last"
     ParamMilestoneId  -> "milestoneId"
+    ParamName         -> "name"
+    ParamNumber       -> "number"
+    ParamOrderBy      -> "orderBy"
+    ParamOwner        -> "owner"
+    ParamRepositoryId -> "repositoryId"
+    ParamStates       -> "states"
+    ParamTitle        -> "title"
 
 renderParamValue :: ParamValue -> Text
 renderParamValue = \case
@@ -102,6 +108,7 @@ renderParamValue = \case
     ParamOrderDirection d -> renderOrderDirection d
     ParamRecordV (p :| ps) -> between "{" "}"
         $ T.intercalate ", " $ map renderQueryParam (p:ps)
+    ParamArrayV array -> renderList renderParamValue array
   where
     renderList :: (a -> Text) -> [a] -> Text
     renderList render = between "[" "]" . T.intercalate ", " . map render

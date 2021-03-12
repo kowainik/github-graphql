@@ -27,7 +27,7 @@ import Prolens (lens)
 import GitHub.Connection (Connection (..), connectionToAst)
 import GitHub.GraphQL (NodeName (..), ParamName (..), ParamValue (..), QueryNode (..),
                        QueryParam (..), mkQuery, nameNode)
-import GitHub.Issues (Issues, issuesToAst)
+import GitHub.Issue (Issues, issuesToAst)
 import GitHub.Lens (LimitL (..), OrderL (..))
 import GitHub.Order (Order, maybeOrderToAst)
 import GitHub.RequiredField (RequiredField (..))

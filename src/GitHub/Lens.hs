@@ -20,6 +20,7 @@ module GitHub.Lens
     , FieldL (..)
     , LimitL (..)
     , NameL (..)
+    , NumberL (..)
     , OrderL (..)
     , OwnerL (..)
     , RepositoryIdL (..)
@@ -86,6 +87,11 @@ class RepositoryIdL (r :: [RequiredField] -> Type) where
 -}
 class OrderL (r :: [RequiredField] -> Type) where
     orderL :: Lens' (r args) (Maybe (Order '[]))
+
+{- | Typeclass for lenses that can change number.
+-}
+class NumberL (r :: [RequiredField] -> Type) where
+    numberL :: Lens (r args) (r (Delete 'FieldNumber args)) Int Int
 
 -- Internal helpers
 

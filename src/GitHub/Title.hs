@@ -10,7 +10,7 @@ module GitHub.Title
     ( HasTitle (..)
     ) where
 
-import GitHub.Issues (IssueField (..))
+import GitHub.Issue (IssueField (..))
 import GitHub.PullRequests (PullRequestField (..))
 
 
