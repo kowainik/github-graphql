@@ -1,4 +1,5 @@
-{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 {- |
 Copyright: (c) 2021 Kowainik
@@ -25,8 +26,8 @@ import Data.List.NonEmpty (NonEmpty (..))
 import Prolens (lens)
 
 import GitHub.Connection (Connection (..), connectionToAst)
-import GitHub.GraphQL (NodeName (..), ParamName (..), ParamValue (..), QueryNode (..),
-                       QueryParam (..), mkQuery, nameNode)
+import GitHub.GraphQL (MilestoneOrderField, NodeName (..), ParamName (..), ParamValue (..),
+                       QueryNode (..), QueryParam (..), mkQuery, nameNode)
 import GitHub.Issue (Issues, issuesToAst)
 import GitHub.Lens (LimitL (..), OrderL (..))
 import GitHub.Order (Order, maybeOrderToAst)
@@ -53,14 +54,14 @@ milestonesToAst Milestones{..} = QueryNode
 -}
 data MilestonesArgs (fields :: [RequiredField]) = MilestonesArgs
     { milestonesArgsLast    :: !Int
-    , milestonesArgsOrderBy :: !(Maybe (Order '[]))
+    , milestonesArgsOrderBy :: !(Maybe (Order MilestoneOrderField '[]))
     }
 
 instance LimitL MilestonesArgs where
     lastL = lens milestonesArgsLast (\args new -> args { milestonesArgsLast = new })
     {-# INLINE lastL #-}
 
-instance OrderL MilestonesArgs where
+instance OrderL MilestonesArgs MilestoneOrderField where
     orderL = lens milestonesArgsOrderBy (\args new -> args { milestonesArgsOrderBy = new })
     {-# INLINE orderL #-}
 
@@ -80,7 +81,7 @@ milestonesArgsToAst MilestonesArgs{..} =
         , queryParamValue = ParamIntV milestonesArgsLast
         }
     ]
-    ++ maybeOrderToAst milestonesArgsOrderBy
+    ++ maybeOrderToAst ParamMilestoneOrderField milestonesArgsOrderBy
 
 {- | Fields of the @Milestone@ object.
 

@@ -32,6 +32,7 @@ module GitHub.GraphQL
     , PullRequestState (..)
       -- ** Other
     , IssueOrderField (..)
+    , MilestoneOrderField (..)
     , OrderDirection (..)
 
       -- * Utils
@@ -179,6 +180,14 @@ data ParamValue
     -}
     | ParamIssueOrderField IssueOrderField
 
+    {- | Milestones order field:
+
+    @
+    field: NUMBER
+    @
+    -}
+    | ParamMilestoneOrderField MilestoneOrderField
+
     {- | Direction of order:
 
     @
@@ -256,8 +265,13 @@ data IssueOrderField
     | UpdatedAt
     deriving stock (Show)
 
--- TODO: create MilestoneOrderField
 -- https://docs.github.com/en/graphql/reference/enums#milestoneorderfield
+data MilestoneOrderField
+    = MCreatedAt
+    | MDueDate
+    | MUpdatedAt
+    | MNumber
+    deriving stock (Show)
 
 data OrderDirection
     = Asc

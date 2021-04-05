@@ -44,9 +44,9 @@ import Prolens (Lens', lens)
 
 import {-# SOURCE #-} GitHub.Author (AuthorField, authorToAst)
 import GitHub.Connection (Connection (..), connectionToAst)
-import GitHub.GraphQL (IssueState (..), Mutation (..), MutationFun (..), NodeName (..),
-                       ParamName (..), ParamValue (..), QueryNode (..), QueryParam (..), mkQuery,
-                       nameNode)
+import GitHub.GraphQL (IssueOrderField, IssueState (..), Mutation (..), MutationFun (..),
+                       NodeName (..), ParamName (..), ParamValue (..), QueryNode (..),
+                       QueryParam (..), mkQuery, nameNode)
 import GitHub.Id (Id (..), MilestoneId, RepositoryId)
 import GitHub.Label (Labels, labelsToAst)
 import GitHub.Lens (LimitL (..), NumberL (..), OrderL (..), RepositoryIdL (..), StatesL (..),
@@ -118,7 +118,7 @@ issuesToAst Issues{..} = QueryNode
 data IssuesArgs (fields :: [RequiredField]) = IssuesArgs
     { issuesArgsLast    :: Int
     , issuesArgsStates  :: NonEmpty IssueState
-    , issuesArgsOrderBy :: Maybe (Order '[])
+    , issuesArgsOrderBy :: Maybe (Order IssueOrderField '[])
     }
 
 instance LimitL IssuesArgs where
@@ -129,7 +129,7 @@ instance StatesL IssuesArgs IssueState where
     statesL = lens issuesArgsStates (\args new -> args { issuesArgsStates = new })
     {-# INLINE statesL #-}
 
-instance OrderL IssuesArgs where
+instance OrderL IssuesArgs IssueOrderField where
     orderL = lens issuesArgsOrderBy (\args new -> args { issuesArgsOrderBy = new })
     {-# INLINE orderL #-}
 
@@ -154,7 +154,7 @@ issuesArgsToAst IssuesArgs{..} =
         , queryParamValue = ParamIssueStatesV issuesArgsStates
         }
     ]
-    ++ maybeOrderToAst issuesArgsOrderBy
+    ++ maybeOrderToAst ParamIssueOrderField issuesArgsOrderBy
 
 
 {- | Fields of the @Issue@ object.
