@@ -86,7 +86,7 @@ issuesQuery = GH.repository
         & set GH.lastL 2
         & set GH.statesL (GH.one GH.closed)
         & set GH.orderL
-            ( Just $ GH.defOrder
+            ( Just $ GH.defIssueOrder
             & set GH.fieldL GH.CreatedAt
             & set GH.directionL GH.Desc
             )
@@ -260,8 +260,8 @@ milestonesQuery = GH.repository
         ( GH.defMilestonesArgs
         & set GH.lastL 1
         & set GH.orderL
-            ( Just $ GH.defOrder
-            & set GH.fieldL GH.CreatedAt
+            ( Just $ GH.defMilestoneOrder
+            & set GH.fieldL GH.MCreatedAt
             & set GH.directionL GH.Desc
             )
         )

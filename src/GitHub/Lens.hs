@@ -36,7 +36,7 @@ import Data.List.NonEmpty (NonEmpty)
 import Data.Text (Text)
 import Prolens (Lens, Lens')
 
-import GitHub.GraphQL (IssueOrderField, OrderDirection)
+import GitHub.GraphQL (OrderDirection)
 import GitHub.Id (RepositoryId)
 import {-# SOURCE #-} GitHub.Order (Order)
 import GitHub.RequiredField (RequiredField (..))
@@ -65,8 +65,8 @@ class StatesL (r :: [RequiredField] -> Type) (state :: Type) | r -> state where
 
 {- | Typeclass for lenses that can change issue order field.
 -}
-class FieldL (r :: [RequiredField] -> Type) where
-    fieldL :: Lens (r args) (r (Delete 'FieldField args)) IssueOrderField IssueOrderField
+class FieldL (r :: [RequiredField] -> Type) (field :: Type) | r -> field where
+    fieldL :: Lens (r args) (r (Delete 'FieldField args)) field field
 
 {- | Typeclass for lenses that can change order direction.
 -}
@@ -85,8 +85,8 @@ class RepositoryIdL (r :: [RequiredField] -> Type) where
 
 {- | Typeclass for lenses that can change optional 'Order'.
 -}
-class OrderL (r :: [RequiredField] -> Type) where
-    orderL :: Lens' (r args) (Maybe (Order '[]))
+class OrderL (r :: [RequiredField] -> Type) (orderField :: Type) | r -> orderField where
+    orderL :: Lens' (r args) (Maybe (Order orderField '[]))
 
 {- | Typeclass for lenses that can change number.
 -}

@@ -4,10 +4,12 @@ module GitHub.Order
     ( Order
     ) where
 
-import GitHub.RequiredField (RequiredField (..))
-import GitHub.GraphQL (OrderDirection, IssueOrderField)
+import Data.Kind (Type)
 
-data Order (fields :: [RequiredField]) = Order
+import GitHub.RequiredField (RequiredField (..))
+import GitHub.GraphQL (OrderDirection)
+
+data Order (orderField :: Type) (fields :: [RequiredField]) = Order
    { orderDirection :: OrderDirection
-   , orderField     :: IssueOrderField
+   , orderField     :: orderField
    }

@@ -1,4 +1,6 @@
-{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 {- |
 Copyright: (c) 2021 Kowainik
@@ -10,18 +12,20 @@ Maintainer: Kowainik <xrom.xkov@gmail.com>
 
 module GitHub.Order
     ( Order (..)
-    , defOrder
+    , defIssueOrder
+    , defMilestoneOrder
 
       -- * AST functions
     , maybeOrderToAst
     ) where
 
+import Data.Kind (Type)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (maybeToList)
 import Prolens (lens)
 
-import GitHub.GraphQL (IssueOrderField (..), OrderDirection (..), ParamName (..), ParamValue (..),
-                       QueryParam (..))
+import GitHub.GraphQL (IssueOrderField (..), MilestoneOrderField (..), OrderDirection (..),
+                       ParamName (..), ParamValue (..), QueryParam (..))
 import GitHub.Lens (DirectionL (..), FieldL (..))
 import GitHub.RequiredField (RequiredField (..))
 
@@ -30,38 +34,44 @@ import GitHub.RequiredField (RequiredField (..))
 
 https://docs.github.com/en/graphql/reference/input-objects#issueorder
 -}
-data Order (fields :: [RequiredField]) = Order
+data Order (orderField :: Type) (fields :: [RequiredField]) = Order
    { orderDirection :: OrderDirection
-   , orderField     :: IssueOrderField
+   , orderField     :: orderField
    }
 
-instance DirectionL Order where
+instance DirectionL (Order f) where
     directionL = lens orderDirection (\args new -> args { orderDirection = new })
     {-# INLINE directionL #-}
 
-instance FieldL Order where
+instance FieldL (Order f) f where
     fieldL = lens orderField (\args new -> args { orderField = new })
     {-# INLINE fieldL #-}
 
 {- | Default value of 'Order'. Use methods of 'FieldL' and
 'DirectionL' to change its fields.
 -}
-defOrder :: Order '[ 'FieldDirection, 'FieldField ]
-defOrder = Order
+defIssueOrder :: Order IssueOrderField '[ 'FieldDirection, 'FieldField ]
+defIssueOrder = Order
     { orderDirection = Asc
     , orderField = CreatedAt
     }
 
-maybeOrderToAst :: Maybe (Order '[]) -> [QueryParam]
-maybeOrderToAst = map orderToAst . maybeToList
+defMilestoneOrder :: Order MilestoneOrderField '[ 'FieldDirection, 'FieldField ]
+defMilestoneOrder = Order
+    { orderDirection = Asc
+    , orderField = MNumber
+    }
 
-orderToAst :: Order '[] -> QueryParam
-orderToAst Order{..} = QueryParam
+maybeOrderToAst :: (f -> ParamValue) -> Maybe (Order f '[]) -> [QueryParam]
+maybeOrderToAst toParamValue = map (orderToAst toParamValue) . maybeToList
+
+orderToAst :: (f -> ParamValue) -> Order f '[] -> QueryParam
+orderToAst toParamValue Order{..} = QueryParam
     { queryParamName = ParamOrderBy
     , queryParamValue = ParamRecordV
         $ QueryParam
             { queryParamName = ParamField
-            , queryParamValue = ParamIssueOrderField orderField
+            , queryParamValue = toParamValue orderField
             }
         :|
         [ QueryParam

@@ -18,9 +18,10 @@ import Data.List.NonEmpty (NonEmpty (..))
 import Data.Semigroup (stimes)
 import Data.Text (Text)
 
-import GitHub.GraphQL (IssueOrderField (..), IssueState (..), Mutation (..), MutationFun (..),
-                       NodeName (..), OrderDirection (..), ParamName (..), ParamValue (..),
-                       PullRequestState (..), Query (..), QueryNode (..), QueryParam (..))
+import GitHub.GraphQL (IssueOrderField (..), IssueState (..), MilestoneOrderField (..),
+                       Mutation (..), MutationFun (..), NodeName (..), OrderDirection (..),
+                       ParamName (..), ParamValue (..), PullRequestState (..), Query (..),
+                       QueryNode (..), QueryParam (..))
 
 import qualified Data.Text as T
 
@@ -105,6 +106,7 @@ renderParamValue = \case
     ParamIssueStatesV (s :| ss) -> renderList renderIssueState (s : ss)
     ParamPullRequestStatesV (s :| ss) -> renderList renderPullRequestState (s : ss)
     ParamIssueOrderField io -> renderIssueOrderField io
+    ParamMilestoneOrderField io -> renderMilestoneOrderField io
     ParamOrderDirection d -> renderOrderDirection d
     ParamRecordV (p :| ps) -> between "{" "}"
         $ T.intercalate ", " $ map renderQueryParam (p:ps)
@@ -129,6 +131,13 @@ renderIssueOrderField = \case
     Comments  -> "COMMENTS"
     CreatedAt -> "CREATED_AT"
     UpdatedAt -> "UPDATED_AT"
+
+renderMilestoneOrderField :: MilestoneOrderField -> Text
+renderMilestoneOrderField = \case
+    MCreatedAt -> "CREATED_AT"
+    MDueDate   -> "DUE_DATE"
+    MUpdatedAt -> "UPDATED_AT"
+    MNumber    -> "NUMBER"
 
 renderOrderDirection :: OrderDirection -> Text
 renderOrderDirection = \case
