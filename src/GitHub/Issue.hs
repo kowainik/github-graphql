@@ -51,10 +51,14 @@ import GitHub.Id (Id (..), MilestoneId, RepositoryId)
 import GitHub.Label (Labels, labelsToAst)
 import GitHub.Lens (LimitL (..), NumberL (..), OrderL (..), RepositoryIdL (..), StatesL (..),
                     TitleL (..))
-import {-# SOURCE #-} GitHub.Milestone (MilestoneField, milestoneToAst)
+import {-# SOURCE #-} GitHub.Milestone (MilestoneField, milestoneFieldsToAst)
 import GitHub.Order (Order, maybeOrderToAst)
 import GitHub.RequiredField (RequiredField (..))
 import GitHub.User (Assignees, assigneesToAst)
+
+----------------------------------------------------------------------------
+-- Single issue
+----------------------------------------------------------------------------
 
 {- | The @issue@ connection of the 'Repository' object.
 
@@ -74,7 +78,7 @@ issueToAst Issue{..} = QueryNode
 
 {- | Arguments for the 'Issues' connection.
 -}
-data IssueArgs (fields :: [RequiredField]) = IssueArgs
+newtype IssueArgs (fields :: [RequiredField]) = IssueArgs
     { issueArgsNumber :: Int
     }
 
@@ -97,6 +101,11 @@ issueArgsToAst IssueArgs{..} =
         , queryParamValue = ParamIntV issueArgsNumber
         }
     ]
+
+----------------------------------------------------------------------------
+-- Multiple issues
+----------------------------------------------------------------------------
+
 {- | The @issues@ connection of the 'Repository' object.
 
 * https://developer.github.com/v4/object/repository/#connections
@@ -156,6 +165,9 @@ issuesArgsToAst IssuesArgs{..} =
     ]
     ++ maybeOrderToAst ParamIssueOrderField issuesArgsOrderBy
 
+----------------------------------------------------------------------------
+-- Issue fields
+----------------------------------------------------------------------------
 
 {- | Fields of the @Issue@ object.
 
@@ -180,11 +192,15 @@ issueFieldToAst = \case
     IssueBody                      -> nameNode NodeBody
     IssueId                        -> nameNode NodeId
     IssueLabels labels             -> labelsToAst labels
-    IssueMilestone milestoneFields -> milestoneToAst milestoneFields
+    IssueMilestone milestoneFields -> milestoneFieldsToAst milestoneFields
     IssueNumber                    -> nameNode NodeNumber
     IssueState                     -> nameNode NodeState
     IssueTitle                     -> nameNode NodeTitle
     IssueUrl                       -> nameNode NodeUrl
+
+----------------------------------------------------------------------------
+-- Create issue
+----------------------------------------------------------------------------
 
 {- | Data type for creating issue.
 
