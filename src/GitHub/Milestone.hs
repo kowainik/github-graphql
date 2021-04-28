@@ -10,16 +10,22 @@ Data types and helper functions to work with @milestones@.
 -}
 
 module GitHub.Milestone
-    ( -- * Data types
-      Milestones (..)
+    ( -- * Query
+      -- ** Data types
+      Milestone (..)
+    , MilestoneArgs (..)
+    , defMilestoneArgs
+
+    , Milestones (..)
     , MilestonesArgs (..)
     , defMilestonesArgs
 
     , MilestoneField (..)
 
       -- * AST functions
-    , milestonesToAst
     , milestoneToAst
+    , milestonesToAst
+    , milestoneFieldsToAst
     ) where
 
 import Data.List.NonEmpty (NonEmpty (..))
@@ -29,10 +35,59 @@ import GitHub.Connection (Connection (..), connectionToAst)
 import GitHub.GraphQL (MilestoneOrderField, NodeName (..), ParamName (..), ParamValue (..),
                        QueryNode (..), QueryParam (..), mkQuery, nameNode)
 import GitHub.Issue (Issues, issuesToAst)
-import GitHub.Lens (LimitL (..), OrderL (..))
+import GitHub.Lens (LimitL (..), NumberL (..), OrderL (..))
 import GitHub.Order (Order, maybeOrderToAst)
 import GitHub.RequiredField (RequiredField (..))
 
+----------------------------------------------------------------------------
+-- Single milestone
+----------------------------------------------------------------------------
+
+{- | The @milestone@ connection of the 'Repository' object.
+
+* https://developer.github.com/v4/object/repository/#connections
+-}
+data Milestone = Milestone
+    { milestoneArgs        :: MilestoneArgs '[]
+    , milestoneConnections :: NonEmpty (Connection MilestoneField)
+    }
+
+milestoneToAst :: Milestone -> QueryNode
+milestoneToAst Milestone{..} = QueryNode
+    { queryNodeName = NodeMilestone
+    , queryNodeArgs = milestoneArgsToAst milestoneArgs
+    , queryNode     = mkQuery (connectionToAst milestoneFieldToAst) milestoneConnections
+    }
+
+{- | Arguments for the 'Milestone' connection.
+-}
+newtype MilestoneArgs (fields :: [RequiredField]) = MilestoneArgs
+    { milestoneArgsNumber    :: Int
+    }
+
+instance NumberL MilestoneArgs where
+    numberL = lens milestoneArgsNumber (\args new -> args { milestoneArgsNumber = new })
+    {-# INLINE numberL #-}
+
+{- | Default value of 'MilestoneArgs'. Use methods of 'HasNumber' to
+change its fields.
+-}
+defMilestoneArgs :: MilestoneArgs '[ 'FieldNumber ]
+defMilestoneArgs = MilestoneArgs
+    { milestoneArgsNumber = -1
+    }
+
+milestoneArgsToAst :: MilestoneArgs '[] -> [QueryParam]
+milestoneArgsToAst MilestoneArgs{..} =
+    [ QueryParam
+        { queryParamName = ParamNumber
+        , queryParamValue = ParamIntV milestoneArgsNumber
+        }
+    ]
+
+----------------------------------------------------------------------------
+-- Multiple milestones
+----------------------------------------------------------------------------
 
 {- | The @milestones@ connection of the 'Repository' object.
 
@@ -83,6 +138,10 @@ milestonesArgsToAst MilestonesArgs{..} =
     ]
     ++ maybeOrderToAst ParamMilestoneOrderField milestonesArgsOrderBy
 
+----------------------------------------------------------------------------
+-- Milestone fields
+----------------------------------------------------------------------------
+
 {- | Fields of the @Milestone@ object.
 
 * https://docs.github.com/en/graphql/reference/objects#milestone
@@ -94,8 +153,8 @@ data MilestoneField
     | MilestoneProgressPercentage
     | MilestoneTitle
 
-milestoneToAst :: NonEmpty MilestoneField -> QueryNode
-milestoneToAst milestoneFields = QueryNode
+milestoneFieldsToAst :: NonEmpty MilestoneField -> QueryNode
+milestoneFieldsToAst milestoneFields = QueryNode
     { queryNodeName = NodeMilestone
     , queryNodeArgs = []
     , queryNode     = mkQuery milestoneFieldToAst milestoneFields
