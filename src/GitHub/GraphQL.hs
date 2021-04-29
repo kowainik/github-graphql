@@ -34,9 +34,6 @@ module GitHub.GraphQL
     , IssueOrderField (..)
     , MilestoneOrderField (..)
     , OrderDirection (..)
-
-      -- * Utils
-    , one
     ) where
 
 import Data.Aeson (FromJSON (..), withText)
@@ -293,12 +290,3 @@ instance State IssueState where
 instance State PullRequestState where
     open   = PullRequestOpen
     closed = PullRequestClosed
-
-----------------------------------------------------------------------------
--- Utils
-----------------------------------------------------------------------------
-
-{- | Helper function to construct singleton 'NonEmpty' lists.
--}
-one :: a -> NonEmpty a
-one x = x :| []

@@ -65,10 +65,12 @@ library
   hs-source-dirs:      src
   exposed-modules:     GitHub
                          GitHub.Author
+                         GitHub.Common
                          GitHub.Connection
                          GitHub.GraphQL
                          GitHub.Id
                          GitHub.Issue
+                         GitHub.Json
                          GitHub.Label
                          GitHub.Lens
                          GitHub.Milestone

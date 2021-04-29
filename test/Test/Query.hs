@@ -22,6 +22,10 @@ querySpecs token = describe "Query" $ do
         GH.queryRepositoryId token "kowainik" "github-graphql"
             `shouldReturn` githubGraphqlRepositoryId
 
+    it "queries the 'hit-on' milestone id" $
+        GH.queryMilestoneId token "kowainik" "hit-on" 2
+            `shouldReturn` (GH.Id "MDk6TWlsZXN0b25lNDY3NjQwNQ==")
+
     it "queries two latest closed issues of 'kowainik/hit-on'" $
         queryHitonIssues token `shouldReturn` Issues
             [ Issue

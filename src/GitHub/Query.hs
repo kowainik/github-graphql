@@ -1,4 +1,4 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DataKinds #-}
 
 {- |
 Copyright: (c) 2020 Kowainik
@@ -18,6 +18,7 @@ module GitHub.Query
       -- ** Queries
     , queryGitHub
     , queryRepositoryId
+    , queryMilestoneId
       -- ** Mutations
     , mutationGitHub
       -- ** Internals
@@ -25,7 +26,7 @@ module GitHub.Query
     ) where
 
 import Control.Exception (throwIO)
-import Data.Aeson (FromJSON (..), eitherDecode, encode, object, withObject, (.:), (.=))
+import Data.Aeson (FromJSON, eitherDecode, encode, object, (.=))
 import Data.ByteString (ByteString)
 import Data.Function ((&))
 import Data.Text (Text)
@@ -35,16 +36,18 @@ import Network.HTTP.Client.TLS (newTlsManager)
 import Network.HTTP.Types.Status (statusCode)
 import Prolens (set)
 import System.Environment (lookupEnv)
-import Type.Reflection (Typeable, typeRep)
 
-import GitHub.GraphQL (Mutation, Query, one)
-import GitHub.Id (RepositoryId)
+import GitHub.Common (one)
+import GitHub.GraphQL (Mutation, Query)
+import GitHub.Id (MilestoneId, RepositoryId)
+import GitHub.Json (Nested (..))
 import GitHub.Render (renderTopMutation, renderTopQuery)
 
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 
 import qualified GitHub.Lens as GH
+import qualified GitHub.Milestone as GH
 import qualified GitHub.Repository as GH
 
 
@@ -75,7 +78,7 @@ has 'FromJSON' instance.
 -}
 queryGitHub
     :: forall a
-    .  (Typeable a, FromJSON a)
+    .  (FromJSON a)
     => GitHubToken  -- ^ Bearer token
     -> Query  -- ^ GraphQL query
     -> IO a
@@ -102,8 +105,8 @@ queryRepositoryId
     -> Text  -- ^ Repository name
     -> IO RepositoryId
 queryRepositoryId token owner repoName =
-    fmap unRepositoryData
-    $ queryGitHub @(RepositoryData RepositoryId) token
+    fmap (unNested @'[ "repository" ])
+    $ queryGitHub token
     $ GH.repositoryToAst repositoryIdQuery
   where
     repositoryIdQuery :: GH.Repository
@@ -114,21 +117,53 @@ queryRepositoryId token owner repoName =
         )
         $ one GH.RepositoryId
 
--- | Wrapper to parse values inside the "repository" object key.
-newtype RepositoryData a = RepositoryData
-    { unRepositoryData :: a
-    }
+{- | Helper function to fetch 'MilestoneId'. It is often needed as
+argument to other queries.
 
-instance (Typeable a, FromJSON a) => FromJSON (RepositoryData a) where
-    parseJSON = withObject ("RepositoryData " ++ typeName @a) $ \o ->
-        RepositoryData <$> (o .: "repository")
+This function parses resulting JSON of the following shape:
+
+@
+{
+  "data": {
+    "repository": {
+      "milestone": {
+        "id": "MDk6TWlsZXN0b25lNDY3NjQwNQ=="
+      }
+    }
+  }
+}
+@
+-}
+queryMilestoneId
+    :: GitHubToken  -- ^ Bearer token
+    -> Text  -- ^ Owner
+    -> Text  -- ^ Repository name
+    -> Int   -- ^ Milestone number
+    -> IO MilestoneId
+queryMilestoneId token owner repoName milestoneNumber =
+    fmap (unNested @'[ "repository", "milestone" ])
+    $ queryGitHub token
+    $ GH.repositoryToAst milestoneIdQuery
+  where
+    milestoneIdQuery :: GH.Repository
+    milestoneIdQuery = GH.repository
+        ( GH.defRepositoryArgs
+        & set GH.ownerL owner
+        & set GH.nameL  repoName
+        )
+        $ one
+        $ GH.milestone
+            ( GH.defMilestoneArgs
+            & set GH.numberL milestoneNumber
+            )
+            (one $ GH.MilestoneId)
 
 {- | Call GitHub API with a token using 'Mutation' and return value that
 has 'FromJSON' instance.
 -}
 mutationGitHub
     :: forall a
-    .  (Typeable a, FromJSON a)
+    .  (FromJSON a)
     => GitHubToken  -- ^ Bearer token
     -> Mutation  -- ^ GraphQL mutation
     -> IO a
@@ -138,7 +173,7 @@ mutationGitHub token = callGitHubRaw token . renderTopMutation
 -}
 callGitHubRaw
     :: forall a
-    .  (Typeable a, FromJSON a)
+    .  FromJSON a
     => GitHubToken  -- ^ Bearer token
     -> Text  -- ^ GraphQL query
     -> IO a
@@ -161,31 +196,9 @@ callGitHubRaw (GitHubToken token) text = do
     response <- httpLbs request manager
 
     case statusCode $ responseStatus response of
-        200 -> case eitherDecode @(GitHubDataResponse a) (responseBody response) of
+        200 -> case eitherDecode @(Nested '[ "data" ] a) (responseBody response) of
             Left err ->
                 throwIO $ userError $ "Error decoding JSON response: " <> err
-            Right (GitHubDataResponse res) ->
+            Right (Nested res) ->
                 pure res
         code -> throwIO $ userError $ "Non-200 response code: " <> show code
-
-{- | Local wrapper to parse objects inside the @data@ field. GraphQL
-API returns JSON of the following shape.
-
-@
-{
-    "data": { ... actual result ... }
-}
-@
-
-This wrapper handles extra layer of @data@.
--}
-newtype GitHubDataResponse a = GitHubDataResponse a
-
-instance (Typeable a, FromJSON a) => FromJSON (GitHubDataResponse a) where
-    parseJSON = withObject ("GitHubDataResponse " ++ typeName @a) $ \o -> do
-        val <- o .: "data"
-        pure $ GitHubDataResponse val
-
--- copy-pasted from @relude@
-typeName :: forall a. Typeable a => String
-typeName = show (typeRep @a)
