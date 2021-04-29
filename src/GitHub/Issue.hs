@@ -66,14 +66,14 @@ import GitHub.User (Assignees, assigneesToAst)
 -}
 data Issue = Issue
     { issueArgs        :: IssueArgs '[]
-    , issueConnections :: NonEmpty (Connection IssueField)
+    , issueConnections :: NonEmpty IssueField
     }
 
 issueToAst :: Issue -> QueryNode
 issueToAst Issue{..} = QueryNode
     { queryNodeName = NodeIssue
     , queryNodeArgs = issueArgsToAst issueArgs
-    , queryNode     = mkQuery (connectionToAst issueFieldToAst) issueConnections
+    , queryNode     = mkQuery issueFieldToAst issueConnections
     }
 
 {- | Arguments for the 'Issues' connection.

@@ -49,14 +49,14 @@ import GitHub.RequiredField (RequiredField (..))
 -}
 data Milestone = Milestone
     { milestoneArgs        :: MilestoneArgs '[]
-    , milestoneConnections :: NonEmpty (Connection MilestoneField)
+    , milestoneConnections :: NonEmpty MilestoneField
     }
 
 milestoneToAst :: Milestone -> QueryNode
 milestoneToAst Milestone{..} = QueryNode
     { queryNodeName = NodeMilestone
     , queryNodeArgs = milestoneArgsToAst milestoneArgs
-    , queryNode     = mkQuery (connectionToAst milestoneFieldToAst) milestoneConnections
+    , queryNode     = mkQuery milestoneFieldToAst milestoneConnections
     }
 
 {- | Arguments for the 'Milestone' connection.

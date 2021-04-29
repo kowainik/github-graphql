@@ -141,7 +141,7 @@ repository repositoryArgs repositoryFields = Repository{..}
 {- | Smart constructor for the 'RepositoryIssues' field of the
 'RepositoryField'.
 -}
-issue :: IssueArgs '[] -> NonEmpty (Connection IssueField) -> RepositoryField
+issue :: IssueArgs '[] -> NonEmpty IssueField -> RepositoryField
 issue issueArgs issueConnections = RepositoryIssue Issue{..}
 
 {- | Smart constructor for the 'RepositoryIssues' field of the
@@ -165,7 +165,7 @@ pullRequests pullRequestsArgs pullRequestsConnections =
 -}
 milestone
     :: MilestoneArgs '[]
-    -> NonEmpty (Connection MilestoneField)
+    -> NonEmpty MilestoneField
     -> RepositoryField
 milestone milestoneArgs milestoneConnections =
     RepositoryMilestone Milestone{..}

@@ -47,6 +47,9 @@ module GitHub
 
       -- * General types
     , module GitHub.Id
+
+      -- * General utils
+    , one
     ) where
 
 import GitHub.Author
@@ -63,3 +66,5 @@ import GitHub.Query
 import GitHub.Repository
 import GitHub.Title
 import GitHub.User
+
+import GitHub.Common (one)
