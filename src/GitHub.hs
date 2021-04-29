@@ -49,6 +49,7 @@ module GitHub
     , module GitHub.Id
 
       -- * General utils
+    , module GitHub.Json
     , one
     ) where
 
@@ -57,6 +58,7 @@ import GitHub.Connection
 import GitHub.GraphQL
 import GitHub.Id
 import GitHub.Issue
+import GitHub.Json
 import GitHub.Label
 import GitHub.Lens
 import GitHub.Milestone
