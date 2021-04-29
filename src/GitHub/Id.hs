@@ -19,8 +19,10 @@ module GitHub.Id
 
       -- * Different IDs
     , AnyId
+    , IssueId
     , MilestoneId
     , RepositoryId
+    , UserId
     ) where
 
 import Data.Aeson (FromJSON (..), withObject, (.:))
@@ -43,12 +45,16 @@ instance Typeable idType => FromJSON (Id idType) where
 
 data IdType
     = IDAny
-    | IDRepository
+    | IDIssue
     | IDMilestone
+    | IDRepository
+    | IDUser
 
 type AnyId = Id 'IDAny
-type RepositoryId = Id 'IDRepository
+type IssueId = Id 'IDMilestone
 type MilestoneId = Id 'IDMilestone
+type RepositoryId = Id 'IDRepository
+type UserId = Id 'IDUser
 
 castId
     :: forall (to :: IdType) (from :: IdType)
