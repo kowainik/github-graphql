@@ -54,6 +54,7 @@ renderNodeName = \case
     NodeBody                     -> "body"
     NodeClientMutationId         -> "clientMutationId"
     NodeCreateIssue              -> "createIssue"
+    NodeDescription              -> "description"
     NodeEdges                    -> "edges"
     NodeId                       -> "id"
     NodeIssue                    -> "issue"
