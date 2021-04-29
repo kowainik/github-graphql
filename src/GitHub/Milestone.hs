@@ -152,6 +152,7 @@ data MilestoneField
     | MilestoneNumber
     | MilestoneProgressPercentage
     | MilestoneTitle
+    | MilestoneDescription
 
 milestoneFieldsToAst :: NonEmpty MilestoneField -> QueryNode
 milestoneFieldsToAst milestoneFields = QueryNode
@@ -167,3 +168,4 @@ milestoneFieldToAst = \case
     MilestoneNumber             -> nameNode NodeNumber
     MilestoneProgressPercentage -> nameNode NodeProgressPercentage
     MilestoneTitle              -> nameNode NodeTitle
+    MilestoneDescription        -> nameNode NodeDescription

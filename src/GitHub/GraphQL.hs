@@ -91,6 +91,7 @@ data NodeName
     | NodeBody
     | NodeClientMutationId
     | NodeCreateIssue
+    | NodeDescription
     | NodeEdges
     | NodeId
     | NodeIssue
