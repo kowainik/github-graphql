@@ -20,14 +20,14 @@ querySpecs :: GH.GitHubToken -> Spec
 querySpecs token = describe "Query" $ do
     it "queries the 'github-graphql' repository id" $
         GH.queryRepositoryId token "kowainik" "github-graphql"
-            `shouldReturn` githubGraphqlRepositoryId
+            `shouldReturn` Right githubGraphqlRepositoryId
 
     it "queries the 'hit-on' milestone id" $
         GH.queryMilestoneId token "kowainik" "hit-on" 2
-            `shouldReturn` (GH.Id "MDk6TWlsZXN0b25lNDY3NjQwNQ==")
+            `shouldReturn` Right (GH.Id "MDk6TWlsZXN0b25lNDY3NjQwNQ==")
 
     it "queries two latest closed issues of 'kowainik/hit-on'" $
-        queryHitonIssues token `shouldReturn` Issues
+        queryHitonIssues token `shouldReturn` Right (Issues
             [ Issue
                 { issueTitle = "Implement \"git-new\"-like command: `hit hop`"
                 , issueAuthorLogin = "chshersh"
@@ -48,10 +48,10 @@ querySpecs token = describe "Query" $ do
                 , issueLabels = [ "CLI" ]
                 , issueAssignees = [ "vrom911" ]
                 }
-            ]
+            ])
 
     it "queries the first milestone from 'kowainik/hit-on'" $
-        queryHitonMilestones token `shouldReturn` Milestones
+        queryHitonMilestones token `shouldReturn` Right (Milestones
             [ Milestone
                 { milestoneId = "MDk6TWlsZXN0b25lNDQ4MDI1Mg=="
                 , milestoneNumber = 1
@@ -59,9 +59,9 @@ querySpecs token = describe "Query" $ do
                 , milestoneProgressPercentage = 100
                 , milestoneTotalIssues = 17
                 }
-            ]
+            ])
 
-queryHitonIssues :: GH.GitHubToken -> IO Issues
+queryHitonIssues :: GH.GitHubToken -> IO (Either GH.GitHubError Issues)
 queryHitonIssues token = GH.queryGitHub token (GH.repositoryToAst issuesQuery)
 
 {-
@@ -232,7 +232,7 @@ instance FromJSON Issue where
         parseAssignees :: Array -> Parser [Text]
         parseAssignees = mapM (withObject "Assignee" $ \o -> o .: "login") . toList
 
-queryHitonMilestones :: GH.GitHubToken -> IO Milestones
+queryHitonMilestones :: GH.GitHubToken -> IO (Either GH.GitHubError Milestones)
 queryHitonMilestones token = GH.queryGitHub token $ GH.repositoryToAst milestonesQuery
 
 {-

@@ -85,7 +85,13 @@ newtype Viewer = Viewer
     }
 
 viewerToAst :: Viewer -> Query
-viewerToAst = mkQuery userFieldToAst . viewerFields
+viewerToAst Viewer{..} = Query
+    [ QueryNode
+        { queryNodeName = NodeViewer
+        , queryNodeArgs = []
+        , queryNode = mkQuery userFieldToAst viewerFields
+        }
+    ]
 
 data UserField
     = UserId

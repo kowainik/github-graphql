@@ -22,11 +22,13 @@ module GitHub.Query
       -- ** Mutations
     , mutationGitHub
       -- ** Internals
+    , GitHubError (..)
     , callGitHubRaw
+    , unNest
     ) where
 
-import Control.Exception (throwIO)
 import Data.Aeson (FromJSON, eitherDecode, encode, object, (.=))
+import Data.Bifunctor (second)
 import Data.ByteString (ByteString)
 import Data.Function ((&))
 import Data.Text (Text)
@@ -40,9 +42,10 @@ import System.Environment (lookupEnv)
 import GitHub.Common (one)
 import GitHub.GraphQL (Mutation, Query)
 import GitHub.Id (MilestoneId, RepositoryId)
-import GitHub.Json (Nested (..))
+import GitHub.Json (GitHubErrorDetails, Nested (..))
 import GitHub.Render (renderTopMutation, renderTopQuery)
 
+import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 
@@ -81,7 +84,7 @@ queryGitHub
     .  (FromJSON a)
     => GitHubToken  -- ^ Bearer token
     -> Query  -- ^ GraphQL query
-    -> IO a
+    -> IO (Either GitHubError a)
 queryGitHub token = callGitHubRaw token . renderTopQuery
 
 {- | Helper function to fetch 'RepositoryId'. It is often needed as
@@ -103,9 +106,9 @@ queryRepositoryId
     :: GitHubToken  -- ^ Bearer token
     -> Text  -- ^ Owner
     -> Text  -- ^ Repository name
-    -> IO RepositoryId
+    -> IO (Either GitHubError RepositoryId)
 queryRepositoryId token owner repoName =
-    fmap (unNested @'[ "repository" ])
+    unNest @'[ "repository" ]
     $ queryGitHub token
     $ GH.repositoryToAst repositoryIdQuery
   where
@@ -139,9 +142,9 @@ queryMilestoneId
     -> Text  -- ^ Owner
     -> Text  -- ^ Repository name
     -> Int   -- ^ Milestone number
-    -> IO MilestoneId
+    -> IO (Either GitHubError MilestoneId)
 queryMilestoneId token owner repoName milestoneNumber =
-    fmap (unNested @'[ "repository", "milestone" ])
+    unNest @'[ "repository", "milestone" ]
     $ queryGitHub token
     $ GH.repositoryToAst milestoneIdQuery
   where
@@ -166,7 +169,7 @@ mutationGitHub
     .  (FromJSON a)
     => GitHubToken  -- ^ Bearer token
     -> Mutation  -- ^ GraphQL mutation
-    -> IO a
+    -> IO (Either GitHubError a)
 mutationGitHub token = callGitHubRaw token . renderTopMutation
 
 {- | Call GitHub API with a token using raw text.
@@ -176,12 +179,12 @@ callGitHubRaw
     .  FromJSON a
     => GitHubToken  -- ^ Bearer token
     -> Text  -- ^ GraphQL query
-    -> IO a
-callGitHubRaw (GitHubToken token) text = do
+    -> IO (Either GitHubError a)
+callGitHubRaw (GitHubToken token) query = do
     manager <- newTlsManager
 
     initialRequest <- parseRequest "https://api.github.com/graphql"
-    let queryBody = object ["query" .= text]
+    let queryBody = object ["query" .= query]
 
     let request = initialRequest
             { method = "POST"
@@ -194,11 +197,44 @@ callGitHubRaw (GitHubToken token) text = do
 
     -- calling the API
     response <- httpLbs request manager
+    let responseCode = statusCode $ responseStatus response
+    let jsonBody     = responseBody response
 
-    case statusCode $ responseStatus response of
-        200 -> case eitherDecode @(Nested '[ "data" ] a) (responseBody response) of
-            Left err ->
-                throwIO $ userError $ "Error decoding JSON response: " <> err
-            Right (Nested res) ->
-                pure res
-        code -> throwIO $ userError $ "Non-200 response code: " <> show code
+    let mkError :: Maybe String -> [GitHubErrorDetails] -> GitHubError
+        mkError gitHubErrorJsonParsing gitHubErrorDetails = GitHubError
+            { gitHubErrorResponseCode = responseCode
+            , gitHubErrorQuery        = query
+            , gitHubErrorJsonBody     = jsonBody
+            , ..
+            }
+
+    pure $ case responseCode of
+        200 -> case decodeResult jsonBody of
+            Right res   -> Right res
+            Left resErr -> case decodeErrors jsonBody of
+                Right errs      -> Left $ mkError (Just resErr) errs
+                Left detailsErr -> Left $ mkError (Just detailsErr) []
+
+        _code -> Left $ mkError Nothing []
+  where
+    decodeResult :: LBS.ByteString -> Either String a
+    decodeResult = fmap unNested . eitherDecode @(Nested '[ "data" ] a)
+
+    decodeErrors :: LBS.ByteString -> Either String [GitHubErrorDetails]
+    decodeErrors = fmap unNested . eitherDecode @(Nested '[ "errors" ] [GitHubErrorDetails])
+
+data GitHubError = GitHubError
+    { gitHubErrorResponseCode :: Int
+    , gitHubErrorQuery        :: Text
+    , gitHubErrorJsonBody     :: LBS.ByteString
+    , gitHubErrorJsonParsing  :: Maybe String
+    , gitHubErrorDetails      :: [GitHubErrorDetails]
+    } deriving stock (Show, Eq)
+
+{- | Helper function to work with GraphQL Queries that return 'Either'.
+-}
+unNest
+    :: forall keys a
+    .  IO (Either GitHubError (Nested keys a))
+    -> IO (Either GitHubError a)
+unNest = fmap (second unNested)
