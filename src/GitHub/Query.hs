@@ -200,8 +200,8 @@ callGitHubRaw (GitHubToken token) query = do
     let responseCode = statusCode $ responseStatus response
     let jsonBody     = responseBody response
 
-    let mkError :: Maybe String -> [GitHubErrorDetails] -> GitHubError
-        mkError gitHubErrorJsonParsing gitHubErrorDetails = GitHubError
+    let mkError :: Maybe String -> Maybe String -> [GitHubErrorDetails] -> GitHubError
+        mkError gitHubErrorJsonRes gitHubErrorJsonErr gitHubErrorDetails = GitHubError
             { gitHubErrorResponseCode = responseCode
             , gitHubErrorQuery        = query
             , gitHubErrorJsonBody     = jsonBody
@@ -212,10 +212,10 @@ callGitHubRaw (GitHubToken token) query = do
         200 -> case decodeResult jsonBody of
             Right res   -> Right res
             Left resErr -> case decodeErrors jsonBody of
-                Right errs      -> Left $ mkError (Just resErr) errs
-                Left detailsErr -> Left $ mkError (Just detailsErr) []
+                Right errs      -> Left $ mkError (Just resErr) Nothing errs
+                Left detailsErr -> Left $ mkError (Just resErr) (Just detailsErr) []
 
-        _code -> Left $ mkError Nothing []
+        _code -> Left $ mkError Nothing Nothing []
   where
     decodeResult :: LBS.ByteString -> Either String a
     decodeResult = fmap unNested . eitherDecode @(Nested '[ "data" ] a)
@@ -227,7 +227,8 @@ data GitHubError = GitHubError
     { gitHubErrorResponseCode :: Int
     , gitHubErrorQuery        :: Text
     , gitHubErrorJsonBody     :: LBS.ByteString
-    , gitHubErrorJsonParsing  :: Maybe String
+    , gitHubErrorJsonRes      :: Maybe String
+    , gitHubErrorJsonErr      :: Maybe String
     , gitHubErrorDetails      :: [GitHubErrorDetails]
     } deriving stock (Show, Eq)
 
