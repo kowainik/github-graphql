@@ -12,7 +12,12 @@ Utilities to parse JSON returned by the API easier.
 -}
 
 module GitHub.Json
-    ( Nested (..)
+    ( -- * Nested parsing
+      Nested (..)
+
+      -- * Error messages
+    , GitHubErrorDetails (..)
+    , ErrorLocation (..)
     ) where
 
 import Data.Aeson (FromJSON (..), withObject, (.:))
@@ -77,3 +82,27 @@ instance (FromJSON (Nested keys a), KnownSymbol key) => FromJSON (Nested (key ':
 
         key :: Text
         key = Text.pack keyStr
+
+data GitHubErrorDetails = GitHubErrorDetails
+    { gitHubErrorDetailsMessage   :: Text
+    , gitHubErrorDetailsLocations :: [ErrorLocation]
+    } deriving stock (Show, Eq)
+
+instance FromJSON GitHubErrorDetails
+  where
+    parseJSON = withObject "GitHubErrorDetails" $ \o -> do
+        gitHubErrorDetailsMessage   <- o .: "message"
+        gitHubErrorDetailsLocations <- o .: "locations"
+        pure GitHubErrorDetails{..}
+
+data ErrorLocation = ErrorLocation
+    { errorLocationLine   :: Int
+    , errorLocationColumn :: Int
+    } deriving stock (Show, Eq)
+
+instance FromJSON ErrorLocation
+  where
+    parseJSON = withObject "ErrorLocation" $ \o -> do
+        errorLocationLine   <- o .: "line"
+        errorLocationColumn <- o .: "column"
+        pure ErrorLocation{..}
