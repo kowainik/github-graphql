@@ -32,10 +32,10 @@ import Data.List.NonEmpty (NonEmpty (..))
 import Prolens (lens)
 
 import GitHub.Connection (Connection (..), connectionToAst)
-import GitHub.GraphQL (MilestoneOrderField, NodeName (..), ParamName (..), ParamValue (..),
-                       QueryNode (..), QueryParam (..), mkQuery, nameNode)
+import GitHub.GraphQL (IssueState (..), MilestoneOrderField, NodeName (..), ParamName (..),
+                       ParamValue (..), QueryNode (..), QueryParam (..), mkQuery, nameNode)
 import GitHub.Issue (Issues, issuesToAst)
-import GitHub.Lens (LimitL (..), NumberL (..), OrderL (..))
+import GitHub.Lens (LimitL (..), NumberL (..), OrderL (..), StatesL (..))
 import GitHub.Order (Order, maybeOrderToAst)
 import GitHub.RequiredField (RequiredField (..))
 
@@ -108,13 +108,18 @@ milestonesToAst Milestones{..} = QueryNode
 {- | Arguments for the 'Milestones' connection.
 -}
 data MilestonesArgs (fields :: [RequiredField]) = MilestonesArgs
-    { milestonesArgsLast    :: !Int
-    , milestonesArgsOrderBy :: !(Maybe (Order MilestoneOrderField '[]))
+    { milestonesArgsLast    :: Int
+    , milestonesArgsStates  :: NonEmpty IssueState
+    , milestonesArgsOrderBy :: Maybe (Order MilestoneOrderField '[])
     }
 
 instance LimitL MilestonesArgs where
     lastL = lens milestonesArgsLast (\args new -> args { milestonesArgsLast = new })
     {-# INLINE lastL #-}
+
+instance StatesL MilestonesArgs IssueState where
+    statesL = lens milestonesArgsStates (\args new -> args { milestonesArgsStates = new })
+    {-# INLINE statesL #-}
 
 instance OrderL MilestonesArgs MilestoneOrderField where
     orderL = lens milestonesArgsOrderBy (\args new -> args { milestonesArgsOrderBy = new })
@@ -126,6 +131,7 @@ change its fields.
 defMilestonesArgs :: MilestonesArgs '[ 'FieldLimit ]
 defMilestonesArgs = MilestonesArgs
     { milestonesArgsLast = -1
+    , milestonesArgsStates = IssueOpen :| [ IssueClosed ]
     , milestonesArgsOrderBy = Nothing
     }
 
@@ -134,6 +140,10 @@ milestonesArgsToAst MilestonesArgs{..} =
     [ QueryParam
         { queryParamName = ParamLast
         , queryParamValue = ParamIntV milestonesArgsLast
+        }
+    , QueryParam
+        { queryParamName = ParamStates
+        , queryParamValue = ParamIssueStatesV milestonesArgsStates
         }
     ]
     ++ maybeOrderToAst ParamMilestoneOrderField milestonesArgsOrderBy
