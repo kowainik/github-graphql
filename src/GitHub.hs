@@ -47,6 +47,10 @@ module GitHub
 
       -- * General types
     , module GitHub.Id
+
+      -- * General utils
+    , module GitHub.Json
+    , one
     ) where
 
 import GitHub.Author
@@ -54,6 +58,7 @@ import GitHub.Connection
 import GitHub.GraphQL
 import GitHub.Id
 import GitHub.Issue
+import GitHub.Json
 import GitHub.Label
 import GitHub.Lens
 import GitHub.Milestone
@@ -63,3 +68,5 @@ import GitHub.Query
 import GitHub.Repository
 import GitHub.Title
 import GitHub.User
+
+import GitHub.Common (one)

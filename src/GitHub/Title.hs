@@ -11,6 +11,7 @@ module GitHub.Title
     ) where
 
 import GitHub.Issue (IssueField (..))
+import GitHub.Milestone (MilestoneField (..))
 import GitHub.PullRequests (PullRequestField (..))
 
 
@@ -26,3 +27,7 @@ instance HasTitle IssueField where
 instance HasTitle PullRequestField where
     title :: PullRequestField
     title = PullRequestTitle
+
+instance HasTitle MilestoneField where
+    title :: MilestoneField
+    title = MilestoneTitle
