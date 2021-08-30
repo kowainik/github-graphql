@@ -35,7 +35,7 @@ querySpecs token = describe "Query" $ do
                 , issueNumber = 2
                 , issueUrl = "https://github.com/kowainik/hit-on/issues/2"
                 , issueState = GH.IssueClosed
-                , issueLabels = [ "CLI", "Git" ]
+                , issueLabels = [ "Git", "CLI" ]
                 , issueAssignees = [ "chshersh" ]
                 }
             , Issue

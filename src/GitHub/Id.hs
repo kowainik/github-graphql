@@ -44,17 +44,17 @@ instance Typeable idType => FromJSON (Id idType) where
     parseJSON = withObject ("Id" <> typeName @idType) $ \o -> Id <$> (o .: "id")
 
 data IdType
-    = IDAny
-    | IDIssue
-    | IDMilestone
-    | IDRepository
-    | IDUser
+    = IdAny
+    | IdIssue
+    | IdMilestone
+    | IdRepository
+    | IdUser
 
-type AnyId = Id 'IDAny
-type IssueId = Id 'IDMilestone
-type MilestoneId = Id 'IDMilestone
-type RepositoryId = Id 'IDRepository
-type UserId = Id 'IDUser
+type AnyId        = Id 'IdAny
+type IssueId      = Id 'IdMilestone
+type MilestoneId  = Id 'IdMilestone
+type RepositoryId = Id 'IdRepository
+type UserId       = Id 'IdUser
 
 castId
     :: forall (to :: IdType) (from :: IdType)

@@ -62,7 +62,7 @@ milestoneToAst Milestone{..} = QueryNode
 {- | Arguments for the 'Milestone' connection.
 -}
 newtype MilestoneArgs (fields :: [RequiredField]) = MilestoneArgs
-    { milestoneArgsNumber    :: Int
+    { milestoneArgsNumber :: Int
     }
 
 instance NumberL MilestoneArgs where
