@@ -34,9 +34,6 @@ module GitHub.GraphQL
     , IssueOrderField (..)
     , MilestoneOrderField (..)
     , OrderDirection (..)
-
-      -- * Utils
-    , one
     ) where
 
 import Data.Aeson (FromJSON (..), withText)
@@ -94,6 +91,7 @@ data NodeName
     | NodeBody
     | NodeClientMutationId
     | NodeCreateIssue
+    | NodeDescription
     | NodeEdges
     | NodeId
     | NodeIssue
@@ -235,7 +233,7 @@ data MutationFun = MutationFun
 data IssueState
     = IssueOpen
     | IssueClosed
-    deriving stock (Show, Eq)
+    deriving stock (Show, Eq, Enum, Bounded)
 
 instance FromJSON IssueState where
     parseJSON = withText "IssueState" $ \case
@@ -247,7 +245,7 @@ data PullRequestState
     = PullRequestOpen
     | PullRequestClosed
     | PullRequestMerged
-    deriving stock (Show, Eq)
+    deriving stock (Show, Eq, Enum, Bounded)
 
 instance FromJSON PullRequestState where
     parseJSON = withText "PullRequestState" $ \case
@@ -263,7 +261,7 @@ data IssueOrderField
     = Comments
     | CreatedAt
     | UpdatedAt
-    deriving stock (Show)
+    deriving stock (Show, Eq, Enum, Bounded)
 
 -- https://docs.github.com/en/graphql/reference/enums#milestoneorderfield
 data MilestoneOrderField
@@ -271,12 +269,12 @@ data MilestoneOrderField
     | MDueDate
     | MUpdatedAt
     | MNumber
-    deriving stock (Show)
+    deriving stock (Show, Eq, Enum, Bounded)
 
 data OrderDirection
     = Asc
     | Desc
-    deriving stock (Show)
+    deriving stock (Show, Eq, Enum, Bounded)
 
 ----------------------------------------------------------------------------
 -- Interfaces
@@ -293,12 +291,3 @@ instance State IssueState where
 instance State PullRequestState where
     open   = PullRequestOpen
     closed = PullRequestClosed
-
-----------------------------------------------------------------------------
--- Utils
-----------------------------------------------------------------------------
-
-{- | Helper function to construct singleton 'NonEmpty' lists.
--}
-one :: a -> NonEmpty a
-one x = x :| []

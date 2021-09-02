@@ -15,8 +15,8 @@ copyright:           2021 Kowainik
 build-type:          Simple
 extra-doc-files:     README.md
                      CHANGELOG.md
-tested-with:         GHC == 8.8.3
-                     GHC == 8.10.1
+tested-with:         GHC == 8.8.4
+                     GHC == 8.10.7
 
 source-repository head
   type:                git
@@ -65,10 +65,12 @@ library
   hs-source-dirs:      src
   exposed-modules:     GitHub
                          GitHub.Author
+                         GitHub.Common
                          GitHub.Connection
                          GitHub.GraphQL
                          GitHub.Id
                          GitHub.Issue
+                         GitHub.Json
                          GitHub.Label
                          GitHub.Lens
                          GitHub.Milestone

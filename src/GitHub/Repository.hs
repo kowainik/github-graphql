@@ -24,6 +24,7 @@ module GitHub.Repository
     , issue
     , issues
     , pullRequests
+    , milestone
     , milestones
 
       -- * AST functions
@@ -42,7 +43,8 @@ import GitHub.GraphQL (NodeName (..), ParamName (..), ParamValue (..), Query (..
 import GitHub.Issue (Issue (..), IssueArgs (..), IssueField, Issues (..), IssuesArgs, issueToAst,
                      issuesToAst)
 import GitHub.Lens (NameL (..), OwnerL (..))
-import GitHub.Milestone (MilestoneField, Milestones (..), MilestonesArgs (..), milestonesToAst)
+import GitHub.Milestone (Milestone (..), MilestoneArgs (..), MilestoneField, Milestones (..),
+                         MilestonesArgs (..), milestoneToAst, milestonesToAst)
 import GitHub.PullRequests (PullRequestField, PullRequests (..), PullRequestsArgs,
                             pullRequestsToAst)
 import GitHub.RequiredField (DisplayFields, RequiredField (..))
@@ -114,6 +116,7 @@ data RepositoryField
     = RepositoryId
     | RepositoryIssue Issue
     | RepositoryIssues Issues
+    | RepositoryMilestone Milestone
     | RepositoryMilestones Milestones
     | RepositoryPullRequests PullRequests
 
@@ -122,6 +125,7 @@ repositoryFieldToAst = \case
     RepositoryId                             -> nameNode NodeId
     RepositoryIssue issueField               -> issueToAst issueField
     RepositoryIssues issuesField             -> issuesToAst issuesField
+    RepositoryMilestone milestoneField       -> milestoneToAst milestoneField
     RepositoryMilestones milestonesField     -> milestonesToAst milestonesField
     RepositoryPullRequests pullRequestsField -> pullRequestsToAst pullRequestsField
 
@@ -137,7 +141,7 @@ repository repositoryArgs repositoryFields = Repository{..}
 {- | Smart constructor for the 'RepositoryIssues' field of the
 'RepositoryField'.
 -}
-issue :: IssueArgs '[] -> NonEmpty (Connection IssueField) -> RepositoryField
+issue :: IssueArgs '[] -> NonEmpty IssueField -> RepositoryField
 issue issueArgs issueConnections = RepositoryIssue Issue{..}
 
 {- | Smart constructor for the 'RepositoryIssues' field of the
@@ -155,6 +159,16 @@ pullRequests
     -> RepositoryField
 pullRequests pullRequestsArgs pullRequestsConnections =
     RepositoryPullRequests PullRequests{..}
+
+{- | Smart constructor for the 'RepositoryMilestone' field of the
+'RepositoryField'.
+-}
+milestone
+    :: MilestoneArgs '[]
+    -> NonEmpty MilestoneField
+    -> RepositoryField
+milestone milestoneArgs milestoneConnections =
+    RepositoryMilestone Milestone{..}
 
 {- | Smart constructor for the 'RepositoryMilestones' field of the
 'RepositoryField'.

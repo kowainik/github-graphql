@@ -19,12 +19,17 @@ module GitHub.Id
 
       -- * Different IDs
     , AnyId
+    , IssueId
     , MilestoneId
     , RepositoryId
+    , UserId
     ) where
 
 import Data.Aeson (FromJSON (..), withObject, (.:))
 import Data.Text (Text)
+import Type.Reflection (Typeable)
+
+import GitHub.Common (typeName)
 
 
 {- | ID of different entities. Uses phantom type variables to
@@ -35,17 +40,21 @@ newtype Id (idType :: IdType) = Id
    } deriving stock (Show)
      deriving newtype (Eq, Ord)
 
-instance FromJSON (Id idType) where
-    parseJSON = withObject "Id" $ \o -> Id <$> (o .: "id")
+instance Typeable idType => FromJSON (Id idType) where
+    parseJSON = withObject ("Id" <> typeName @idType) $ \o -> Id <$> (o .: "id")
 
 data IdType
-    = IDAny
-    | IDRepository
-    | IDMilestone
+    = IdAny
+    | IdIssue
+    | IdMilestone
+    | IdRepository
+    | IdUser
 
-type AnyId = Id 'IDAny
-type RepositoryId = Id 'IDRepository
-type MilestoneId = Id 'IDMilestone
+type AnyId        = Id 'IdAny
+type IssueId      = Id 'IdMilestone
+type MilestoneId  = Id 'IdMilestone
+type RepositoryId = Id 'IdRepository
+type UserId       = Id 'IdUser
 
 castId
     :: forall (to :: IdType) (from :: IdType)

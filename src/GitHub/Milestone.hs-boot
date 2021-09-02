@@ -1,6 +1,6 @@
 module GitHub.Milestone
     ( MilestoneField
-    , milestoneToAst
+    , milestoneFieldsToAst
     ) where
 
 import Data.List.NonEmpty (NonEmpty)
@@ -10,4 +10,4 @@ import GitHub.GraphQL (QueryNode)
 
 data MilestoneField
 
-milestoneToAst :: NonEmpty MilestoneField -> QueryNode
+milestoneFieldsToAst :: NonEmpty MilestoneField -> QueryNode

@@ -52,6 +52,11 @@ exampleQuery = GH.repository
            [GH.author $ GH.one GH.login]
         )
     , GH.RepositoryId
+    , GH.milestone
+        ( GH.defMilestoneArgs
+        & set GH.numberL 2
+        )
+        (GH.one $ GH.title)
     ]
 
 queryRendered :: Text
@@ -75,6 +80,9 @@ queryRendered = T.unlines
     , "      }"
     , "    }"
     , "    id"
+    , "    milestone(number: 2) {"
+    , "      title"
+    , "    }"
     , "  }"
     , "}"
     ]
